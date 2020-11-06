@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller\Api;
+namespace App\Controller\Api\v1;
 
 use App\Entity\Sheet;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
