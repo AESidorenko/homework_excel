@@ -19,32 +19,17 @@ class SheetRepository extends ServiceEntityRepository
         parent::__construct($registry, Sheet::class);
     }
 
-    // /**
-    //  * @return Sheet[] Returns an array of Sheet objects
-    //  */
-    /*
-    public function findByExampleField($value)
+    /**
+     * @param int $offset
+     * @param int $limit
+     * @return Sheet[]|array
+     */
+    public function findAllPaginated(int $offset = 0, int $limit = 25): array
     {
         return $this->createQueryBuilder('s')
-            ->andWhere('s.exampleField = :val')
-            ->setParameter('val', $value)
-            ->orderBy('s.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult()
-        ;
+                    ->setFirstResult($offset)
+                    ->setMaxResults($limit)
+                    ->getQuery()
+                    ->getResult();
     }
-    */
-
-    /*
-    public function findOneBySomeField($value): ?Sheet
-    {
-        return $this->createQueryBuilder('s')
-            ->andWhere('s.exampleField = :val')
-            ->setParameter('val', $value)
-            ->getQuery()
-            ->getOneOrNullResult()
-        ;
-    }
-    */
 }

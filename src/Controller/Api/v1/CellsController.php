@@ -5,11 +5,14 @@ namespace App\Controller\Api\v1;
 use App\Entity\Cell;
 use App\Entity\Sheet;
 use App\Repository\CellRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\Annotations as Rest;
 use FOS\RestBundle\Request\ParamFetcher;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
@@ -52,32 +55,42 @@ class CellsController extends AbstractController
     }
 
     /**
-     * @Route("/{row<\d+>}/{col<\d+>}", methods={"GET"})
-     * @param int $row
-     * @param int $col
+     * @Route("/", methods={"PUT"})
+     * @Rest\QueryParam(name="row", requirements="\d+", allowBlank=false)
+     * @Rest\QueryParam(name="col", requirements="\d+", allowBlank=false)
+     * @param Sheet                  $sheet
+     * @param ParamFetcher           $fetcher
+     * @param EntityManagerInterface $entityManager
+     * @param Request                $request
+     * @param CellRepository         $cellRepository
      * @return JsonResponse
      */
-    public function one(int $row, int $col): JsonResponse
+    public function update(Sheet $sheet, ParamFetcher $fetcher, EntityManagerInterface $entityManager, Request $request, CellRepository $cellRepository): Response
     {
-        return new JsonResponse([
-            'status' => 'OK',
-            'data'   => [
-                "row"   => 2,
-                "col"   => 3,
-                "value" => 10
-            ],
-        ]);
-    }
+        $row = $fetcher->get('row', true);
+        $col = $fetcher->get('col', true);
 
-    /**
-     * @Route("/{row<\d+>}/{col<\d+>}", methods={"PATCH"})
-     * @param int $row
-     * @param int $col
-     * @return JsonResponse
-     */
-    public function update(int $row, int $col): JsonResponse
-    {
-        return new JsonResponse([]);
+//        $value = $request->request->get('value', 0);
+
+        return new Response(0, 204);
+
+        /** @var Cell[] $cells */
+        $cell = $cellRepository->findOneBySheetAndCoordinates($sheet, $row, $col);
+        if ($cell === null) {
+            $cell = new Cell();
+            $cell
+                ->setRow($row)
+                ->setCol($col)
+                ->setValue($value);
+
+            $entityManager->persist($cell);
+        } else {
+            $cell->setValue($value);
+        }
+
+        $entityManager->flush();
+
+        return new Response('', Response::HTTP_NO_CONTENT);
     }
 
     /**

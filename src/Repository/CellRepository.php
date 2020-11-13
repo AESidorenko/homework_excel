@@ -67,4 +67,18 @@ class CellRepository extends ServiceEntityRepository
                   ->getQuery()
                   ->getResult();
     }
+
+    public function findOneBySheetAndCoordinates(Sheet $sheet, string $row, string $col): ?Cell
+    {
+        $qb = $this->createQueryBuilder('c');
+
+        return $qb->where('c.sheet = :sheet')
+                  ->andWhere('c.row = :row')
+                  ->andWhere('c.row = :col')
+                  ->setParameter('sheet', $sheet)
+                  ->setParameter('row', $row)
+                  ->setParameter('col', $col)
+                  ->getQuery()
+                  ->getOneOrNullResult();
+    }
 }

@@ -32,3 +32,6 @@ services:
 
 fos_rest:
     param_fetcher_listener: true
+    body_listener:
+        decoders:
+            json: fos_rest.decoder.json

@@ -7,6 +7,12 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\Entity(repositoryClass=CellRepository::class)
+ * @ORM\Table(name="cell", uniqueConstraints={
+ *      @ORM\UniqueConstraint(
+ *          name="cell_coordinates",
+ *          columns={"sheet_id", "row", "col"}
+ *      )
+ * })
  */
 class Cell
 {

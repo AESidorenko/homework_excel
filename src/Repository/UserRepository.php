@@ -19,32 +19,21 @@ class UserRepository extends ServiceEntityRepository
         parent::__construct($registry, User::class);
     }
 
-    // /**
-    //  * @return User[] Returns an array of User objects
-    //  */
-    /*
-    public function findByExampleField($value)
+    /**
+     * @param string $order
+     * @param int    $offset
+     * @param int    $limit
+     * @return User[]
+     */
+    public function findAllOrderedPaginated(string $order = 'id', int $offset = 0, int $limit = 25): array
     {
-        return $this->createQueryBuilder('u')
-            ->andWhere('u.exampleField = :val')
-            ->setParameter('val', $value)
-            ->orderBy('u.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult()
-        ;
-    }
-    */
+        $orderRule = sprintf('u.%s', in_array($order, ['id', 'username']) ? $order : 'id');
 
-    /*
-    public function findOneBySomeField($value): ?User
-    {
         return $this->createQueryBuilder('u')
-            ->andWhere('u.exampleField = :val')
-            ->setParameter('val', $value)
-            ->getQuery()
-            ->getOneOrNullResult()
-        ;
+                    ->orderBy($orderRule, 'ASC')
+                    ->setFirstResult($offset)
+                    ->setMaxResults($limit)
+                    ->getQuery()
+                    ->getResult();
     }
-    */
 }
