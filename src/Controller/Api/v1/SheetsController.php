@@ -129,4 +129,23 @@ class SheetsController extends AbstractController
 
         return new Response(null, Response::HTTP_NO_CONTENT);
     }
+
+    /**
+     * @Route("/{id<\d+>}/dimensions", methods={"GET"})
+     * @param Sheet           $sheet
+     * @param SheetRepository $sheetRepository
+     * @return JsonResponse
+     */
+    public function getDimensions(Sheet $sheet, SheetRepository $sheetRepository): Response
+    {
+        // todo: access rights, error handling
+        $dimensions = $sheetRepository->getDimensionsBySheet($sheet);
+
+        $result = [
+            "rows" => $dimensions->totalRows,
+            "cols" => $dimensions->totalCols
+        ];
+
+        return new Response(json_encode($result), Response::HTTP_OK);
+    }
 }

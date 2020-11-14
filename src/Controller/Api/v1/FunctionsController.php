@@ -13,23 +13,21 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
- * @Route("/sheets/{sheetId}/cells")
+ * @Route("/sheets/{sheetId}/functions")
  * @ParamConverter("sheet", options={"id" = "sheetId"})
  */
-class OperationsController extends AbstractController
+class FunctionsController extends AbstractController
 {
     /**
      * @Route("/sum")
      * @Rest\QueryParam(name="row", requirements="\d+", default=null)
      * @Rest\QueryParam(name="col", requirements="\d+", default=null)
      * @param Sheet          $sheet
-     * @param string         $row
-     * @param int            $col
      * @param CellRepository $cellRepository
      * @param ParamFetcher   $fetcher
      * @return JsonResponse
      */
-    public function sum(Sheet $sheet, string $row, int $col, CellRepository $cellRepository, ParamFetcher $fetcher): Response
+    public function sum(Sheet $sheet, CellRepository $cellRepository, ParamFetcher $fetcher): Response
     {
         // todo: params validation, access rights, error handling
         $row = $fetcher->get('row', false);
@@ -53,13 +51,11 @@ class OperationsController extends AbstractController
      * @Rest\QueryParam(name="row", requirements="\d+", default=null)
      * @Rest\QueryParam(name="col", requirements="\d+", default=null)
      * @param Sheet          $sheet
-     * @param string         $row
-     * @param int            $col
      * @param CellRepository $cellRepository
      * @param ParamFetcher   $fetcher
      * @return JsonResponse
      */
-    public function average(Sheet $sheet, string $row, int $col, CellRepository $cellRepository, ParamFetcher $fetcher): Response
+    public function average(Sheet $sheet, CellRepository $cellRepository, ParamFetcher $fetcher): Response
     {
         // todo: params validation, access rights, error handling
         $row = $fetcher->get('row', false);
@@ -84,13 +80,11 @@ class OperationsController extends AbstractController
      * @Rest\QueryParam(name="col", requirements="\d+", default=null)
      * @Rest\QueryParam(name="parameter", requirements="\d*\.?\d+", allowBlank=false)
      * @param Sheet          $sheet
-     * @param string         $row
-     * @param int            $col
      * @param CellRepository $cellRepository
      * @param ParamFetcher   $fetcher
      * @return JsonResponse
      */
-    public function percentile(Sheet $sheet, string $row, int $col, CellRepository $cellRepository, ParamFetcher $fetcher): Response
+    public function percentile(Sheet $sheet, CellRepository $cellRepository, ParamFetcher $fetcher): Response
     {
         // todo: params validation, access rights, error handling
         $row       = $fetcher->get('row', false);
