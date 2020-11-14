@@ -48,9 +48,9 @@ class UsersController extends AbstractController
 
     /**
      * @Route("/", methods={"GET"})
-     * @Rest\QueryParam(name="order", requirements="(id|username)" allowBlank=false, default="id")
-     * @Rest\QueryParam(name="offset", requirements="\d+" allowBlank=false, default="0")
-     * @Rest\QueryParam(name="limit", requirements="\d+" allowBlank=false, default="25")
+     * @Rest\QueryParam(name="order", requirements="(id|username)", allowBlank=false, default="id")
+     * @Rest\QueryParam(name="offset", requirements="\d+", allowBlank=false, default="0")
+     * @Rest\QueryParam(name="limit", requirements="\d+", allowBlank=false, default="25")
      * @param UserRepository $userRepository
      * @param ParamFetcher   $fetcher
      * @return Response

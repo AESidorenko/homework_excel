@@ -47,8 +47,8 @@ class SheetsController extends AbstractController
 
     /**
      * @Route("/", methods={"GET"})
-     * @Rest\QueryParam(name="offset", requirements="\d+" allowBlank=false, default="0")
-     * @Rest\QueryParam(name="limit", requirements="\d+" allowBlank=false, default="25")
+     * @Rest\QueryParam(name="offset", requirements="\d+", allowBlank=false, default="0")
+     * @Rest\QueryParam(name="limit", requirements="\d+", allowBlank=false, default="25")
      * @param SheetRepository $sheetRepository
      * @param ParamFetcher    $fetcher
      * @return JsonResponse
