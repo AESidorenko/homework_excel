@@ -53,7 +53,7 @@ class CellsController extends AbstractController
             ];
         }
 
-        return new Response(json_encode(['cells' => $data]), Response::HTTP_OK);
+        return new Response(json_encode(['cells' => $data]), Response::HTTP_OK, ['Content-type' => 'application/json']);
     }
 
     /**
@@ -81,6 +81,7 @@ class CellsController extends AbstractController
         if ($cell === null) {
             $cell = new Cell();
             $cell
+                ->setSheet($sheet)
                 ->setRow($row)
                 ->setCol($col)
                 ->setValue($jsonData->value);
@@ -94,7 +95,7 @@ class CellsController extends AbstractController
             $entityManager->flush();
         } catch (\Exception $exception) {
             // todo: handle error
-            return new Response(null, Response::HTTP_BAD_REQUEST);
+            return new Response($exception, Response::HTTP_BAD_REQUEST);
         }
 
         return new Response('', Response::HTTP_NO_CONTENT);
@@ -134,6 +135,6 @@ class CellsController extends AbstractController
         return new Response(json_encode([
             'status'  => 'OK',
             'message' => 'Cell data deleted',
-        ]), Response::HTTP_OK);
+        ]), Response::HTTP_OK, ['Content-type' => 'application/json']);
     }
 }

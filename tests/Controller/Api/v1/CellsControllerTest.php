@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Tests\Controller\Api;
+namespace App\Tests\Controller\Api\v1;
 
 use App\DataFixtures\MockDataHelper;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -42,11 +42,11 @@ class CellsControllerTest extends WebTestCase
         $client->followRedirects(true);
         $client->xmlHttpRequest(
             'PUT',
-            '/api/v1/sheets/1/cells/',
-            [
-                "row" => 10,
-                "col" => 20
-            ]
+            '/api/v1/sheets/1/cells/?row=10&col=20',
+            [],
+            [],
+            [],
+            json_encode(['value' => 30])
         );
 
         $this->assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());

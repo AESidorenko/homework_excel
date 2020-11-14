@@ -3,7 +3,9 @@
 namespace App\Controller\Api\v1;
 
 use App\Entity\Sheet;
+use App\Repository\CellRepository;
 use App\Repository\SheetRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\Annotations as Rest;
 use FOS\RestBundle\Request\ParamFetcher;
@@ -21,28 +23,25 @@ class SheetsController extends AbstractController
     /**
      * @Route("/", methods={"POST"})
      * @param Request                $request
+     * @param UserRepository         $userRepository
      * @param EntityManagerInterface $entityManager
      * @return Response
      */
-    public function create(Request $request, EntityManagerInterface $entityManager): Response
+    public function create(Request $request, UserRepository $userRepository, EntityManagerInterface $entityManager): Response
     {
         // todo: json validation, access rights, error handling
 
         $jsonData = json_decode($request->getContent());
-        $user     = $this->getUser();
+        $user     = $userRepository->findAll()[0]; // todo: use current logged user
 
-        $sheet = new Sheet();
-        $sheet->setName($jsonData->name);
-        // todo: resolve collision between User as entity and UserInterface object, set sheet owner
+        $sheet = (new Sheet())
+            ->setName($jsonData->name)
+            ->setOwner($user); // todo: resolve collision between User as entity and UserInterface object, set sheet owner
 
-        try {
-            $entityManager->persist($sheet);
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            return new Response(null, Response::HTTP_CONFLICT);
-        }
+        $entityManager->persist($sheet);
+        $entityManager->flush();
 
-        return new Response(json_encode(['id' => $sheet->getId()]), Response::HTTP_CREATED);
+        return new Response(json_encode(['id' => $sheet->getId()]), Response::HTTP_CREATED, ['Content-type' => 'application/json']);
     }
 
     /**
@@ -70,7 +69,7 @@ class SheetsController extends AbstractController
             ];
         }
 
-        return new Response(json_encode(['sheets' => $list]), Response::HTTP_OK);
+        return new Response(json_encode(['sheets' => $list]), Response::HTTP_OK, ['Content-type' => 'application/json']);
     }
 
     /**
@@ -78,17 +77,22 @@ class SheetsController extends AbstractController
      * @param Sheet $sheet
      * @return JsonResponse
      */
-    public function one(Sheet $sheet): JsonResponse
+    public function one(Sheet $sheet): Response
     {
-        $sheetOwner = $sheet->getOwner();
+        $data = [
+            'id'       => $sheet->getId(),
+            'name'     => $sheet->getName(),
+            'owner_id' => $sheet->getOwner()->getUsername()
+        ];
 
-        return new JsonResponse([]);
+        return new Response(json_encode($data), Response::HTTP_OK, ['Content-type' => 'application/json']);
     }
 
     /**
      * @Route("/{id<\d+>}", methods={"PUT"})
-     * @param Sheet   $sheet
-     * @param Request $request
+     * @param Sheet                  $sheet
+     * @param Request                $request
+     * @param EntityManagerInterface $entityManager
      * @return JsonResponse
      */
     public function update(Sheet $sheet, Request $request, EntityManagerInterface $entityManager): Response
@@ -99,12 +103,7 @@ class SheetsController extends AbstractController
 
         $sheet->setName($jsonData->name);
 
-        try {
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: check error handling
-            return new Response(null, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->flush();
 
         return new Response(null, Response::HTTP_NO_CONTENT);
     }
@@ -132,20 +131,20 @@ class SheetsController extends AbstractController
 
     /**
      * @Route("/{id<\d+>}/dimensions", methods={"GET"})
-     * @param Sheet           $sheet
-     * @param SheetRepository $sheetRepository
+     * @param Sheet          $sheet
+     * @param CellRepository $cellRepository
      * @return JsonResponse
      */
-    public function getDimensions(Sheet $sheet, SheetRepository $sheetRepository): Response
+    public function getDimensions(Sheet $sheet, CellRepository $cellRepository): Response
     {
         // todo: access rights, error handling
-        $dimensions = $sheetRepository->getDimensionsBySheet($sheet);
+        $dimensions = $cellRepository->getDimensionsBySheet($sheet);
 
         $result = [
-            "rows" => $dimensions->totalRows,
-            "cols" => $dimensions->totalCols
+            "rows" => $dimensions['totalRows'],
+            "cols" => $dimensions['totalCols']
         ];
 
-        return new Response(json_encode($result), Response::HTTP_OK);
+        return new Response(json_encode($result), Response::HTTP_OK, ['Content-type' => 'application/json']);
     }
 }

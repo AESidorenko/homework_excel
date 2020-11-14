@@ -20,8 +20,8 @@ class FunctionsController extends AbstractController
 {
     /**
      * @Route("/sum")
-     * @Rest\QueryParam(name="row", requirements="\d+", default=null)
-     * @Rest\QueryParam(name="col", requirements="\d+", default=null)
+     * @Rest\QueryParam(name="row", requirements="\d+", nullable=true)
+     * @Rest\QueryParam(name="col", requirements="\d+", nullable=true)
      * @param Sheet          $sheet
      * @param CellRepository $cellRepository
      * @param ParamFetcher   $fetcher
@@ -35,7 +35,7 @@ class FunctionsController extends AbstractController
 
         if (($row === null && $col === null) || ($row !== null && $col !== null)) {
             // todo: handle error
-            return new Response(null, Response::HTTP_BAD_REQUEST);
+            return new Response('Dimension is not single', Response::HTTP_BAD_REQUEST);
         }
 
         $rangeKind  = $row === null ? 'col' : 'row';
@@ -43,13 +43,13 @@ class FunctionsController extends AbstractController
 
         $result = $cellRepository->calculateSumBySheetAnd1dRange($sheet, $rangeKind, $rangeIndex);
 
-        return new Response(json_encode(['result' => $result]), Response::HTTP_OK);
+        return new Response(json_encode(['result' => $result]), Response::HTTP_OK, ['Content-type' => 'application/json']);
     }
 
     /**
      * @Route("/average")
-     * @Rest\QueryParam(name="row", requirements="\d+", default=null)
-     * @Rest\QueryParam(name="col", requirements="\d+", default=null)
+     * @Rest\QueryParam(name="row", requirements="\d+", nullable=true)
+     * @Rest\QueryParam(name="col", requirements="\d+", nullable=true)
      * @param Sheet          $sheet
      * @param CellRepository $cellRepository
      * @param ParamFetcher   $fetcher
@@ -71,13 +71,13 @@ class FunctionsController extends AbstractController
 
         $result = $cellRepository->calculateAverageBySheetAnd1dRange($sheet, $rangeKind, $rangeIndex);
 
-        return new Response(json_encode(['result' => $result]), Response::HTTP_OK);
+        return new Response(json_encode(['result' => $result]), Response::HTTP_OK, ['Content-type' => 'application/json']);
     }
 
     /**
      * @Route("/percentile")
-     * @Rest\QueryParam(name="row", requirements="\d+", default=null)
-     * @Rest\QueryParam(name="col", requirements="\d+", default=null)
+     * @Rest\QueryParam(name="row", requirements="\d+", nullable=true)
+     * @Rest\QueryParam(name="col", requirements="\d+", nullable=true)
      * @Rest\QueryParam(name="parameter", requirements="\d*\.?\d+", allowBlank=false)
      * @param Sheet          $sheet
      * @param CellRepository $cellRepository
@@ -87,8 +87,8 @@ class FunctionsController extends AbstractController
     public function percentile(Sheet $sheet, CellRepository $cellRepository, ParamFetcher $fetcher): Response
     {
         // todo: params validation, access rights, error handling
-        $row       = $fetcher->get('row', false);
-        $col       = $fetcher->get('col', false);
+        $row       = $fetcher->get('row', true);
+        $col       = $fetcher->get('col', true);
         $parameter = (float)$fetcher->get('parameter', true);
 
         if (($row === null && $col === null) || ($row !== null && $col !== null)) {
@@ -101,6 +101,6 @@ class FunctionsController extends AbstractController
 
         $result = $cellRepository->calculatePercentileBySheetAnd1dRangeAndParameter($sheet, $rangeKind, $rangeIndex, $parameter);
 
-        return new Response(json_encode(['result' => $result]), Response::HTTP_OK);
+        return new Response(json_encode(['result' => $result]), Response::HTTP_OK, ['Content-type' => 'application/json']);
     }
 }

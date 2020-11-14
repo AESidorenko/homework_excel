@@ -20,7 +20,7 @@ class Sheet
     private $id;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(name="sheet_name", type="string", length=255)
      */
     private $name;
 
