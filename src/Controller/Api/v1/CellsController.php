@@ -32,8 +32,10 @@ class CellsController extends AbstractController
      * @param CellRepository $cellRepository
      * @return JsonResponse
      */
-    public function range(Sheet $sheet, ParamFetcher $fetcher, CellRepository $cellRepository): JsonResponse
+    public function range(Sheet $sheet, ParamFetcher $fetcher, CellRepository $cellRepository): Response
     {
+        // todo: params validation, access rights, error handling
+
         $left   = $fetcher->get('left', true);
         $top    = $fetcher->get('top', true);
         $right  = $fetcher->get('right', true);
@@ -51,7 +53,7 @@ class CellsController extends AbstractController
             ];
         }
 
-        return new JsonResponse(['cells' => $data]);
+        return new Response(json_encode(['cells' => $data]), Response::HTTP_OK);
     }
 
     /**
@@ -67,12 +69,12 @@ class CellsController extends AbstractController
      */
     public function update(Sheet $sheet, ParamFetcher $fetcher, EntityManagerInterface $entityManager, Request $request, CellRepository $cellRepository): Response
     {
+        // todo: json validation, access rights, error handling
+
+        $jsonData = json_decode($request->getContent());
+
         $row = $fetcher->get('row', true);
         $col = $fetcher->get('col', true);
-
-//        $value = $request->request->get('value', 0);
-
-        return new Response(0, 204);
 
         /** @var Cell[] $cells */
         $cell = $cellRepository->findOneBySheetAndCoordinates($sheet, $row, $col);
@@ -81,29 +83,57 @@ class CellsController extends AbstractController
             $cell
                 ->setRow($row)
                 ->setCol($col)
-                ->setValue($value);
+                ->setValue($jsonData->value);
 
             $entityManager->persist($cell);
         } else {
-            $cell->setValue($value);
+            $cell->setValue($jsonData->value);
         }
 
-        $entityManager->flush();
+        try {
+            $entityManager->flush();
+        } catch (\Exception $exception) {
+            // todo: handle error
+            return new Response(null, Response::HTTP_BAD_REQUEST);
+        }
 
         return new Response('', Response::HTTP_NO_CONTENT);
     }
 
     /**
      * @Route("/{row<\d+>}/{col<\d+>}", methods={"DELETE"})
-     * @param int $row
-     * @param int $col
+     * @param Sheet                  $sheet
+     * @param int                    $row
+     * @param int                    $col
+     * @param ParamFetcher           $fetcher
+     * @param CellRepository         $cellRepository
+     * @param EntityManagerInterface $entityManager
      * @return JsonResponse
      */
-    public function delete(int $row, int $col): JsonResponse
+    public function delete(Sheet $sheet, int $row, int $col, ParamFetcher $fetcher, CellRepository $cellRepository, EntityManagerInterface $entityManager): Response
     {
-        return new JsonResponse([
+        // todo: params validation, access rights, error handling
+
+        $row = $fetcher->get('row', true);
+        $col = $fetcher->get('col', true);
+
+        $cell = $cellRepository->findOneBySheetAndCoordinates($sheet, $row, $col);
+        if ($cell === null) {
+            // todo: handle errors
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $entityManager->remove($sheet);
+            $entityManager->flush();
+        } catch (\Exception $exception) {
+            // todo: handle error
+            return new Response(null, Response::HTTP_BAD_REQUEST);
+        }
+
+        return new Response(json_encode([
             'status'  => 'OK',
             'message' => 'Cell data deleted',
-        ]);
+        ]), Response::HTTP_OK);
     }
 }

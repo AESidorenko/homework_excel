@@ -117,7 +117,7 @@ class SheetsController extends AbstractController
      */
     public function delete(Sheet $sheet, EntityManagerInterface $entityManager): Response
     {
-        // todo: json validation, access rights, error handling
+        // todo: access rights, error handling
 
         try {
             $entityManager->remove($sheet);
