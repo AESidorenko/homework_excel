@@ -31,7 +31,7 @@ class Sheet
     private $owner;
 
     /**
-     * @ORM\OneToMany(targetEntity=Cell::class, mappedBy="�sheet", orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity=Cell::class, mappedBy="sheet", orphanRemoval=true)
      */
     private $cells;
 
@@ -81,7 +81,7 @@ class Sheet
     {
         if (!$this->cells->contains($cell)) {
             $this->cells[] = $cell;
-            $cell->set�sheet($this);
+            $cell->setSheet($this);
         }
 
         return $this;
@@ -91,8 +91,8 @@ class Sheet
     {
         if ($this->cells->removeElement($cell)) {
             // set the owning side to null (unless already changed)
-            if ($cell->get�sheet() === $this) {
-                $cell->set�sheet(null);
+            if ($cell->getSheet() === $this) {
+                $cell->setSheet(null);
             }
         }
 

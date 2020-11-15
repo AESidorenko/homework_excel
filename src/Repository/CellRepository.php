@@ -74,7 +74,7 @@ class CellRepository extends ServiceEntityRepository
 
         return $qb->andWhere('c.sheet = :sheet')
                   ->andWhere('c.row = :row')
-                  ->andWhere('c.row = :col')
+                  ->andWhere('c.col = :col')
                   ->setParameter('sheet', $sheet)
                   ->setParameter('row', $row)
                   ->setParameter('col', $col)

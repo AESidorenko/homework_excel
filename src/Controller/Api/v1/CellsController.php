@@ -91,27 +91,22 @@ class CellsController extends AbstractController
             $cell->setValue($jsonData->value);
         }
 
-        try {
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: handle error
-            return new Response($exception, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->flush();
 
         return new Response('', Response::HTTP_NO_CONTENT);
     }
 
     /**
-     * @Route("/{row<\d+>}/{col<\d+>}", methods={"DELETE"})
+     * @Route("/", methods={"DELETE"})
+     * @Rest\QueryParam(name="row", requirements="\d+", nullable=false)
+     * @Rest\QueryParam(name="col", requirements="\d+", nullable=false)
      * @param Sheet                  $sheet
-     * @param int                    $row
-     * @param int                    $col
      * @param ParamFetcher           $fetcher
      * @param CellRepository         $cellRepository
      * @param EntityManagerInterface $entityManager
      * @return JsonResponse
      */
-    public function delete(Sheet $sheet, int $row, int $col, ParamFetcher $fetcher, CellRepository $cellRepository, EntityManagerInterface $entityManager): Response
+    public function delete(Sheet $sheet, ParamFetcher $fetcher, CellRepository $cellRepository, EntityManagerInterface $entityManager): Response
     {
         // todo: params validation, access rights, error handling
 
@@ -124,17 +119,9 @@ class CellsController extends AbstractController
             return new Response('', Response::HTTP_NOT_FOUND);
         }
 
-        try {
-            $entityManager->remove($sheet);
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: handle error
-            return new Response(null, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->remove($cell);
+        $entityManager->flush();
 
-        return new Response(json_encode([
-            'status'  => 'OK',
-            'message' => 'Cell data deleted',
-        ]), Response::HTTP_OK, ['Content-type' => 'application/json']);
+        return new Response(null, Response::HTTP_NO_CONTENT);
     }
 }

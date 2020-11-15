@@ -64,8 +64,9 @@ class SheetsController extends AbstractController
         $list = [];
         foreach ($sheets as $sheet) {
             $list[] = [
-                'id'   => $sheet->getId(),
-                'name' => $sheet->getUsername()
+                'id'         => $sheet->getId(),
+                'name'       => $sheet->getName(),
+                'owner_name' => $sheet->getOwner()->getUsername()
             ];
         }
 
@@ -118,13 +119,8 @@ class SheetsController extends AbstractController
     {
         // todo: access rights, error handling
 
-        try {
-            $entityManager->remove($sheet);
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: check error handling
-            return new Response(null, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->remove($sheet);
+        $entityManager->flush();
 
         return new Response(null, Response::HTTP_NO_CONTENT);
     }

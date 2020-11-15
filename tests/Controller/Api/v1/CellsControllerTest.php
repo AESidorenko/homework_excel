@@ -36,6 +36,9 @@ class CellsControllerTest extends WebTestCase
         $this->assertJsonStringEqualsJsonString(json_encode($expectedJson), $responseJson);
     }
 
+    /**
+     * @depends testRange
+     */
     public function testUpdate()
     {
         $client = static::createClient();
@@ -52,27 +55,18 @@ class CellsControllerTest extends WebTestCase
         $this->assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());
     }
 
+    /**
+     * @depends testUpdate
+     */
     public function testDelete()
     {
-        $this->markTestSkipped();
-
-        return;
-
         $client = static::createClient();
 
         $client->xmlHttpRequest(
             'DELETE',
-            '/api/v1/sheets/1/cells/0/0'
+            '/api/v1/sheets/1/cells/?row=4&col=5'
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
-
-        $responseJson = $client->getResponse()->getContent();
-
-        $expectedJson = json_encode([
-            'status'  => 'OK',
-            'message' => 'Cell data deleted',
-        ]);
-        $this->assertJsonStringEqualsJsonString($expectedJson, $responseJson);
+        $this->assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());
     }
 }

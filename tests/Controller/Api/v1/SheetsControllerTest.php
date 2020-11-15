@@ -8,6 +8,30 @@ use Symfony\Component\HttpFoundation\Response;
 class SheetsControllerTest extends WebTestCase
 {
 
+    public function testCreate()
+    {
+        $client = static::createClient();
+        $client->followRedirects(true);
+        $client->xmlHttpRequest(
+            'POST',
+            '/api/v1/sheets/',
+            [],
+            [],
+            [],
+            json_encode(['name' => 'test_sheet_2'])
+        );
+
+        $responseJson = $client->getResponse()->getContent();
+
+        $this->assertEquals(Response::HTTP_CREATED, $client->getResponse()->getStatusCode());
+
+        $expectedJson = json_encode(['id' => 2]);
+        $this->assertJsonStringEqualsJsonString($expectedJson, $responseJson);
+    }
+
+    /**
+     * @depends testCreate
+     */
     public function testOne()
     {
         $client = static::createClient();
@@ -31,6 +55,9 @@ class SheetsControllerTest extends WebTestCase
         $this->assertJsonStringEqualsJsonString(json_encode($expectedJson), $responseJson);
     }
 
+    /**
+     * @depends testOne
+     */
     public function testUpdate()
     {
         $client = static::createClient();
@@ -47,37 +74,41 @@ class SheetsControllerTest extends WebTestCase
         $this->assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());
     }
 
-    public function testCreate()
+    /**
+     * @depends testUpdate
+     */
+    public function testList()
     {
         $client = static::createClient();
         $client->followRedirects(true);
         $client->xmlHttpRequest(
-            'POST',
+            'GET',
             '/api/v1/sheets/',
-            [],
-            [],
-            [],
-            json_encode(['name' => 'test_sheet_2'])
+            [
+                "offset" => 0,
+                "limit"  => 25
+            ]
         );
 
         $responseJson = $client->getResponse()->getContent();
 
-        $this->assertEquals(Response::HTTP_CREATED, $client->getResponse()->getStatusCode());
+        $this->assertEquals(Response::HTTP_OK, $client->getResponse()->getStatusCode());
 
-        $expectedJson = json_encode(['id' => 2]);
+        $expectedJson = json_encode([
+            "sheets" => [
+                [
+                    'id'         => 1,
+                    'name'       => 'test_sheet_1',
+                    'owner_name' => 'user1'
+                ]
+            ]
+        ]);
         $this->assertJsonStringEqualsJsonString($expectedJson, $responseJson);
     }
 
-    public function testList()
-    {
-
-    }
-
-    public function testDelete()
-    {
-
-    }
-
+    /**
+     * @depends testList
+     */
     public function testDimensions()
     {
         $client = static::createClient();
@@ -96,5 +127,20 @@ class SheetsControllerTest extends WebTestCase
         $responseData = json_decode($responseJson, true);
         $this->assertArrayHasKey('rows', $responseData);
         $this->assertArrayHasKey('cols', $responseData);
+    }
+
+    /**
+     * @depends testDimensions
+     */
+    public function testDelete()
+    {
+        $client = static::createClient();
+        $client->followRedirects(true);
+        $client->xmlHttpRequest(
+            'DELETE',
+            '/api/v1/sheets/1'
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
     }
 }
