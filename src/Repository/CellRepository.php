@@ -21,35 +21,6 @@ class CellRepository extends ServiceEntityRepository
         parent::__construct($registry, Cell::class);
     }
 
-    // /**
-    //  * @return Cell[] Returns an array of Cell objects
-    //  */
-    /*
-    public function findByExampleField($value)
-    {
-        return $this->createQueryBuilder('c')
-            ->andWhere('c.exampleField = :val')
-            ->setParameter('val', $value)
-            ->orderBy('c.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult()
-        ;
-    }
-    */
-
-    /*
-    public function findOneBySomeField($value): ?Cell
-    {
-        return $this->createQueryBuilder('c')
-            ->andWhere('c.exampleField = :val')
-            ->setParameter('val', $value)
-            ->getQuery()
-            ->getOneOrNullResult()
-        ;
-    }
-    */
-
     public function findAllBySheetAndRange(Sheet $sheet, string $left, string $top, string $right, string $bottom): array
     {
         $qb = $this->createQueryBuilder('c');

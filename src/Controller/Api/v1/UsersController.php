@@ -3,6 +3,7 @@
 namespace App\Controller\Api\v1;
 
 use App\Entity\User;
+use App\Helper\MissingArrayFieldsValidator;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\Annotations as Rest;
@@ -11,6 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 
@@ -19,6 +21,8 @@ use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
  */
 class UsersController extends AbstractController
 {
+    use MissingArrayFieldsValidator;
+
     /**
      * @Route("/", methods={"POST"})
      * @param Request                      $request
@@ -26,24 +30,23 @@ class UsersController extends AbstractController
      * @param EntityManagerInterface       $entityManager
      * @return JsonResponse
      */
-    public function create(Request $request, UserPasswordEncoderInterface $encoder, EntityManagerInterface $entityManager): Response
+    public function create(Request $request, UserPasswordEncoderInterface $encoder, EntityManagerInterface $entityManager): JsonResponse
     {
-        // todo: json validation, access rights, error handling
-
-        $jsonData = json_decode($request->getContent());
+        $jsonData = json_decode($request->getContent(), true);
+        $this->AssertSchema($jsonData, ['username', 'password']);
 
         $user = new User();
-        $user->setUsername($jsonData->username)
-             ->setPassword($encoder->encodePassword($user, $jsonData->password));
+        $user->setUsername($jsonData['username'])
+             ->setPassword($encoder->encodePassword($user, $jsonData['password']));
 
         try {
             $entityManager->persist($user);
             $entityManager->flush();
         } catch (\Exception $exception) {
-            return new Response(null, Response::HTTP_CONFLICT);
+            throw new ConflictHttpException();
         }
 
-        return new Response(json_encode(['id' => $user->getId()]), Response::HTTP_CREATED);
+        return new JsonResponse(['id' => $user->getId()], Response::HTTP_CREATED);
     }
 
     /**
@@ -53,15 +56,13 @@ class UsersController extends AbstractController
      * @Rest\QueryParam(name="limit", requirements="\d+", allowBlank=false, default="25")
      * @param UserRepository $userRepository
      * @param ParamFetcher   $fetcher
-     * @return Response
+     * @return JsonResponse
      */
-    public function list(UserRepository $userRepository, ParamFetcher $fetcher): Response
+    public function list(UserRepository $userRepository, ParamFetcher $fetcher): JsonResponse
     {
         $order  = $fetcher->get('order', true);
         $offset = (int)$fetcher->get('offset', true);
         $limit  = (int)$fetcher->get('limit', true);
-
-        // todo: check validation, access rights, error handling
 
         $users = $userRepository->findAllOrderedPaginated($order, $offset, $limit);
 
@@ -73,7 +74,7 @@ class UsersController extends AbstractController
             ];
         }
 
-        return new Response(json_encode(['users' => $list]), Response::HTTP_OK);
+        return new JsonResponse(['users' => $list]);
     }
 
     /**
@@ -83,9 +84,12 @@ class UsersController extends AbstractController
      */
     public function one(User $user): JsonResponse
     {
-        // todo: implement logic
+        $userData = [
+            'username'     => $user->getUsername(),
+            'sheets-count' => $user->getSheets()->count()
+        ];
 
-        return new JsonResponse([]);
+        return new JsonResponse(['user' => $userData]);
     }
 
     /**
@@ -94,23 +98,16 @@ class UsersController extends AbstractController
      * @param Request                      $request
      * @param UserPasswordEncoderInterface $encoder
      * @param EntityManagerInterface       $entityManager
-     * @return JsonResponse
+     * @return Response
      */
     public function update(User $user, Request $request, UserPasswordEncoderInterface $encoder, EntityManagerInterface $entityManager): Response
     {
-        // todo: json validation, access rights, error handling
+        $jsonData = json_decode($request->getContent(), true);
+        $this->AssertSchema($jsonData, ['password']);
 
-        $jsonData = json_decode($request->getContent());
+        $user->setPassword($encoder->encodePassword($user, $jsonData['password']));
 
-        $user->setPassword($encoder->encodePassword($user, $jsonData->password));
-        // todo: update role
-
-        try {
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: check error handling
-            return new Response(null, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->flush();
 
         return new Response(null, Response::HTTP_NO_CONTENT);
     }
@@ -119,19 +116,12 @@ class UsersController extends AbstractController
      * @Route("/{id<\d+>}", methods={"DELETE"})
      * @param User                   $user
      * @param EntityManagerInterface $entityManager
-     * @return JsonResponse
+     * @return Response
      */
     public function delete(User $user, EntityManagerInterface $entityManager): Response
     {
-        // todo: json validation, access rights, error handling
-
-        try {
-            $entityManager->remove($user);
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: check error handling
-            return new Response(null, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->remove($user);
+        $entityManager->flush();
 
         return new Response(null, Response::HTTP_NO_CONTENT);
     }

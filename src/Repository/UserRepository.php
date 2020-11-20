@@ -44,4 +44,27 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
                     ->getQuery()
                     ->getOneOrNullResult();
     }
+
+    public function findAllOrderedPaginated(string $order, int $offset, int $limit)
+    {
+        switch ($order) {
+            case 'id':
+                $orderCondition = 'u.id';
+
+                break;
+            case 'username':
+                $orderCondition = 'u.username';
+
+                break;
+            default:
+                return [];
+        }
+
+        return $this->createQueryBuilder('u')
+                    ->orderBy($orderCondition, 'ASC')
+                    ->setFirstResult($offset)
+                    ->setMaxResults($limit)
+                    ->getQuery()
+                    ->getResult();
+    }
 }
