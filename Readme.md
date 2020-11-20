@@ -2,7 +2,7 @@
 * PHP 7.4+
 * Database server: Ver 15.1 Distrib 10.3.21-MariaDB
 
-\* Project powered by Symfony 5.1.8
+\* Project uses Symfony 5.1.8
 
 # Project installation
 
@@ -12,7 +12,7 @@
 composer install
 ```
 * Configure database connection in .env file
-* Create and initialize main and test databases:
+* Create and initialize both main and test databases:
 ```bash
 php bin/console doctrine:database:create
 php bin/console doctrine:migrations:migrate
@@ -32,4 +32,3 @@ Use the following base URI to access the API methods:
 ```
 http://127.0.0.1:8000
 ```
-
