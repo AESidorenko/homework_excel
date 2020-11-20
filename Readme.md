@@ -1,10 +1,10 @@
-###### Requirements:
+# Requirements:
 * PHP 7.4+
 * Database server: Ver 15.1 Distrib 10.3.21-MariaDB
 
 \* Project powered by Symfony 5.1.8
 
-###### Project installation
+# Project installation
 
 * Clone the repository, enter the directory created
 * Install dependencies
