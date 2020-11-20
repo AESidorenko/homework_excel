@@ -3,7 +3,10 @@
 namespace App\Controller\Api\v1;
 
 use App\Entity\Sheet;
+use App\Helper\MissingArrayFieldsValidator;
+use App\Repository\CellRepository;
 use App\Repository\SheetRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\Annotations as Rest;
 use FOS\RestBundle\Request\ParamFetcher;
@@ -18,31 +21,30 @@ use Symfony\Component\Routing\Annotation\Route;
  */
 class SheetsController extends AbstractController
 {
+    use MissingArrayFieldsValidator;
+
     /**
      * @Route("/", methods={"POST"})
      * @param Request                $request
+     * @param UserRepository         $userRepository
      * @param EntityManagerInterface $entityManager
-     * @return Response
+     * @return JsonResponse
      */
-    public function create(Request $request, EntityManagerInterface $entityManager): Response
+    public function create(Request $request, UserRepository $userRepository, EntityManagerInterface $entityManager): JsonResponse
     {
-        // todo: json validation, access rights, error handling
+        $jsonData = json_decode($request->getContent(), true);
+        $this->AssertSchema($jsonData, ['name']);
 
-        $jsonData = json_decode($request->getContent());
-        $user     = $this->getUser();
+        $user = $this->getUser();
 
-        $sheet = new Sheet();
-        $sheet->setName($jsonData->name);
-        // todo: resolve collision between User as entity and UserInterface object, set sheet owner
+        $sheet = (new Sheet())
+            ->setName($jsonData['name'])
+            ->setOwner($user);
 
-        try {
-            $entityManager->persist($sheet);
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            return new Response(null, Response::HTTP_CONFLICT);
-        }
+        $entityManager->persist($sheet);
+        $entityManager->flush();
 
-        return new Response(json_encode(['id' => $sheet->getId()]), Response::HTTP_CREATED);
+        return new JsonResponse(['id' => $sheet->getId()], Response::HTTP_CREATED);
     }
 
     /**
@@ -53,24 +55,23 @@ class SheetsController extends AbstractController
      * @param ParamFetcher    $fetcher
      * @return JsonResponse
      */
-    public function list(SheetRepository $sheetRepository, ParamFetcher $fetcher): Response
+    public function list(SheetRepository $sheetRepository, ParamFetcher $fetcher): JsonResponse
     {
         $offset = (int)$fetcher->get('offset', true);
         $limit  = (int)$fetcher->get('limit', true);
-
-        // todo: check validation, access rights, error handling
 
         $sheets = $sheetRepository->findAllPaginated($offset, $limit);
 
         $list = [];
         foreach ($sheets as $sheet) {
             $list[] = [
-                'id'   => $sheet->getId(),
-                'name' => $sheet->getUsername()
+                'id'         => $sheet->getId(),
+                'name'       => $sheet->getName(),
+                'owner_name' => $sheet->getOwner()->getUsername()
             ];
         }
 
-        return new Response(json_encode(['sheets' => $list]), Response::HTTP_OK);
+        return new JsonResponse(['sheets' => $list]);
     }
 
     /**
@@ -80,31 +81,30 @@ class SheetsController extends AbstractController
      */
     public function one(Sheet $sheet): JsonResponse
     {
-        $sheetOwner = $sheet->getOwner();
+        $data = [
+            'id'       => $sheet->getId(),
+            'name'     => $sheet->getName(),
+            'owner_id' => $sheet->getOwner()->getUsername()
+        ];
 
-        return new JsonResponse([]);
+        return new JsonResponse($data);
     }
 
     /**
      * @Route("/{id<\d+>}", methods={"PUT"})
-     * @param Sheet   $sheet
-     * @param Request $request
+     * @param Sheet                  $sheet
+     * @param Request                $request
+     * @param EntityManagerInterface $entityManager
      * @return JsonResponse
      */
     public function update(Sheet $sheet, Request $request, EntityManagerInterface $entityManager): Response
     {
-        // todo: json validation, access rights, error handling
+        $jsonData = json_decode($request->getContent(), true);
+        $this->AssertSchema($jsonData, 'name');
 
-        $jsonData = json_decode($request->getContent());
+        $sheet->setName($jsonData['name']);
 
-        $sheet->setName($jsonData->name);
-
-        try {
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: check error handling
-            return new Response(null, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->flush();
 
         return new Response(null, Response::HTTP_NO_CONTENT);
     }
@@ -117,16 +117,27 @@ class SheetsController extends AbstractController
      */
     public function delete(Sheet $sheet, EntityManagerInterface $entityManager): Response
     {
-        // todo: access rights, error handling
-
-        try {
-            $entityManager->remove($sheet);
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: check error handling
-            return new Response(null, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->remove($sheet);
+        $entityManager->flush();
 
         return new Response(null, Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * @Route("/{id<\d+>}/dimensions", methods={"GET"})
+     * @param Sheet          $sheet
+     * @param CellRepository $cellRepository
+     * @return JsonResponse
+     */
+    public function getDimensions(Sheet $sheet, CellRepository $cellRepository): JsonResponse
+    {
+        $dimensions = $cellRepository->getDimensionsBySheet($sheet);
+
+        $result = [
+            "rows" => $dimensions['totalRows'],
+            "cols" => $dimensions['totalCols']
+        ];
+
+        return new JsonResponse($result);
     }
 }

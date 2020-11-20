@@ -21,35 +21,6 @@ class CellRepository extends ServiceEntityRepository
         parent::__construct($registry, Cell::class);
     }
 
-    // /**
-    //  * @return Cell[] Returns an array of Cell objects
-    //  */
-    /*
-    public function findByExampleField($value)
-    {
-        return $this->createQueryBuilder('c')
-            ->andWhere('c.exampleField = :val')
-            ->setParameter('val', $value)
-            ->orderBy('c.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult()
-        ;
-    }
-    */
-
-    /*
-    public function findOneBySomeField($value): ?Cell
-    {
-        return $this->createQueryBuilder('c')
-            ->andWhere('c.exampleField = :val')
-            ->setParameter('val', $value)
-            ->getQuery()
-            ->getOneOrNullResult()
-        ;
-    }
-    */
-
     public function findAllBySheetAndRange(Sheet $sheet, string $left, string $top, string $right, string $bottom): array
     {
         $qb = $this->createQueryBuilder('c');
@@ -74,7 +45,7 @@ class CellRepository extends ServiceEntityRepository
 
         return $qb->andWhere('c.sheet = :sheet')
                   ->andWhere('c.row = :row')
-                  ->andWhere('c.row = :col')
+                  ->andWhere('c.col = :col')
                   ->setParameter('sheet', $sheet)
                   ->setParameter('row', $row)
                   ->setParameter('col', $col)
@@ -91,7 +62,7 @@ class CellRepository extends ServiceEntityRepository
 
         return (float)$this->createQueryBuilder('c')
                            ->andWhere('c.sheet = :sheet')
-                           ->andWhere(sprintf("%s = :rangeIndex", $rangeKind))
+                           ->andWhere(sprintf("c.%s = :rangeIndex", $rangeKind))
                            ->select('SUM(c.value) as result')
                            ->setParameter('rangeIndex', $rangeIndex)
                            ->setParameter('sheet', $sheet)
@@ -108,7 +79,7 @@ class CellRepository extends ServiceEntityRepository
 
         return (float)$this->createQueryBuilder('c')
                            ->andWhere('c.sheet = :sheet')
-                           ->andWhere(sprintf("%s = :rangeIndex", $rangeKind))
+                           ->andWhere(sprintf("c.%s = :rangeIndex", $rangeKind))
                            ->select('AVG(c.value) as result')
                            ->setParameter('rangeIndex', $rangeIndex)
                            ->setParameter('sheet', $sheet)
@@ -125,8 +96,8 @@ class CellRepository extends ServiceEntityRepository
 
         $cnt = (int)$this->createQueryBuilder('c')
                          ->andWhere('c.sheet = :sheet')
-                         ->andWhere(sprintf("%s = :rangeIndex", $rangeKind))
-                         ->select('COUNT(*) as result')
+                         ->andWhere(sprintf("c.%s = :rangeIndex", $rangeKind))
+                         ->select('COUNT(c) as result')
                          ->setParameter('rangeIndex', $rangeIndex)
                          ->setParameter('sheet', $sheet)
                          ->getQuery()
@@ -136,7 +107,7 @@ class CellRepository extends ServiceEntityRepository
 
         return (float)$this->createQueryBuilder('c')
                            ->andWhere('c.sheet = :sheet')
-                           ->andWhere(sprintf("%s = :rangeIndex", $rangeKind))
+                           ->andWhere(sprintf("c.%s = :rangeIndex", $rangeKind))
                            ->select('c.value as result')
                            ->setParameter('rangeIndex', $rangeIndex)
                            ->setParameter('sheet', $sheet)
@@ -145,5 +116,16 @@ class CellRepository extends ServiceEntityRepository
                            ->setMaxResults(1)
                            ->getQuery()
                            ->getSingleScalarResult();
+    }
+
+    public function getDimensionsBySheet(Sheet $sheet)
+    {
+        return $this->createQueryBuilder('c')
+                    ->andWhere('c.sheet = :sheet')
+                    ->select('MAX(c.row)+1 as totalRows')
+                    ->addSelect('MAX(c.col)+1 as totalCols')
+                    ->setParameter('sheet', $sheet)
+                    ->getQuery()
+                    ->getSingleResult();
     }
 }

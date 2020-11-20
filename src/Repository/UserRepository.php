@@ -5,6 +5,9 @@ namespace App\Repository;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
+use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * @method User|null find($id, $lockMode = null, $lockVersion = null)
@@ -12,7 +15,7 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method User[]    findAll()
  * @method User[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class UserRepository extends ServiceEntityRepository
+class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
@@ -20,17 +23,45 @@ class UserRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param string $order
-     * @param int    $offset
-     * @param int    $limit
-     * @return User[]
+     * Used to upgrade (rehash) the user's password automatically over time.
      */
-    public function findAllOrderedPaginated(string $order = 'id', int $offset = 0, int $limit = 25): array
+    public function upgradePassword(UserInterface $user, string $newEncodedPassword): void
     {
-        $orderRule = sprintf('u.%s', in_array($order, ['id', 'username']) ? $order : 'id');
+        if (!$user instanceof User) {
+            throw new UnsupportedUserException(sprintf('Instances of "%s" are not supported.', \get_class($user)));
+        }
+
+        $user->setPassword($newEncodedPassword);
+        $this->_em->persist($user);
+        $this->_em->flush();
+    }
+
+    public function findOneByUsername($username)
+    {
+        return $this->createQueryBuilder('u')
+                    ->andWhere('u.username = :val')
+                    ->setParameter('val', $username)
+                    ->getQuery()
+                    ->getOneOrNullResult();
+    }
+
+    public function findAllOrderedPaginated(string $order, int $offset, int $limit)
+    {
+        switch ($order) {
+            case 'id':
+                $orderCondition = 'u.id';
+
+                break;
+            case 'username':
+                $orderCondition = 'u.username';
+
+                break;
+            default:
+                return [];
+        }
 
         return $this->createQueryBuilder('u')
-                    ->orderBy($orderRule, 'ASC')
+                    ->orderBy($orderCondition, 'ASC')
                     ->setFirstResult($offset)
                     ->setMaxResults($limit)
                     ->getQuery()

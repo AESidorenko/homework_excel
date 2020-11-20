@@ -4,7 +4,6 @@ namespace App\Entity;
 
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -21,12 +20,18 @@ class User implements UserInterface
     private $id;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(type="string", length=180, unique=true)
      */
     private $username;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(type="json")
+     */
+    private $roles = [];
+
+    /**
+     * @var string The hashed password
+     * @ORM\Column(type="string")
      */
     private $password;
 
@@ -34,6 +39,11 @@ class User implements UserInterface
      * @ORM\OneToMany(targetEntity=Sheet::class, mappedBy="owner", orphanRemoval=true)
      */
     private $sheets;
+
+    /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $apiToken;
 
     public function __construct()
     {
@@ -45,9 +55,42 @@ class User implements UserInterface
         return $this->id;
     }
 
-    public function getUsername(): ?string
+    /**
+     * @return ArrayCollection
+     */
+    public function getSheets(): ArrayCollection
     {
-        return $this->username;
+        return $this->sheets;
+    }
+
+    /**
+     * @param ArrayCollection $sheets
+     */
+    public function setSheets(ArrayCollection $sheets): void
+    {
+        $this->sheets = $sheets;
+    }
+
+    public function getApiToken(): ?string
+    {
+        return $this->apiToken;
+    }
+
+    public function setApiToken(?string $apiToken): self
+    {
+        $this->apiToken = $apiToken;
+
+        return $this;
+    }
+
+    /**
+     * A visual identifier that represents this user.
+     *
+     * @see UserInterface
+     */
+    public function getUsername(): string
+    {
+        return (string)$this->username;
     }
 
     public function setUsername(string $username): self
@@ -57,9 +100,30 @@ class User implements UserInterface
         return $this;
     }
 
-    public function getPassword(): ?string
+    /**
+     * @see UserInterface
+     */
+    public function getRoles(): array
     {
-        return $this->password;
+        $roles   = $this->roles;
+        $roles[] = 'ROLE_USER';
+
+        return array_unique($roles);
+    }
+
+    public function setRoles(array $roles): self
+    {
+        $this->roles = $roles;
+
+        return $this;
+    }
+
+    /**
+     * @see UserInterface
+     */
+    public function getPassword(): string
+    {
+        return (string)$this->password;
     }
 
     public function setPassword(string $password): self
@@ -70,47 +134,19 @@ class User implements UserInterface
     }
 
     /**
-     * @return Collection|Sheet[]
+     * @see UserInterface
      */
-    public function getSheets(): Collection
-    {
-        return $this->sheets;
-    }
-
-    public function addSheet(Sheet $sheet): self
-    {
-        if (!$this->sheets->contains($sheet)) {
-            $this->sheets[] = $sheet;
-            $sheet->setOwner($this);
-        }
-
-        return $this;
-    }
-
-    public function removeSheet(Sheet $sheet): self
-    {
-        if ($this->sheets->removeElement($sheet)) {
-            // set the owning side to null (unless already changed)
-            if ($sheet->getOwner() === $this) {
-                $sheet->setOwner(null);
-            }
-        }
-
-        return $this;
-    }
-
-    public function getRoles()
-    {
-        // TODO: Implement getRoles() method.
-    }
-
     public function getSalt()
     {
-        // TODO: Implement getSalt() method.
+        // not needed when using the "bcrypt" algorithm in security.yaml
     }
 
+    /**
+     * @see UserInterface
+     */
     public function eraseCredentials()
     {
-        // TODO: Implement eraseCredentials() method.
+        // If you store any temporary, sensitive data on the user, clear it here
+        // $this->plainPassword = null;
     }
 }

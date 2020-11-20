@@ -6,6 +6,7 @@ use App\Repository\SheetRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * @ORM\Entity(repositoryClass=SheetRepository::class)
@@ -20,7 +21,7 @@ class Sheet
     private $id;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(name="sheet_name", type="string", length=255)
      */
     private $name;
 
@@ -31,7 +32,7 @@ class Sheet
     private $owner;
 
     /**
-     * @ORM\OneToMany(targetEntity=Cell::class, mappedBy="�sheet", orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity=Cell::class, mappedBy="sheet", orphanRemoval=true)
      */
     private $cells;
 
@@ -57,12 +58,12 @@ class Sheet
         return $this;
     }
 
-    public function getOwner(): ?User
+    public function getOwner(): ?UserInterface
     {
         return $this->owner;
     }
 
-    public function setOwner(?User $owner): self
+    public function setOwner(?UserInterface $owner): self
     {
         $this->owner = $owner;
 
@@ -81,7 +82,7 @@ class Sheet
     {
         if (!$this->cells->contains($cell)) {
             $this->cells[] = $cell;
-            $cell->set�sheet($this);
+            $cell->setSheet($this);
         }
 
         return $this;
@@ -91,8 +92,8 @@ class Sheet
     {
         if ($this->cells->removeElement($cell)) {
             // set the owning side to null (unless already changed)
-            if ($cell->get�sheet() === $this) {
-                $cell->set�sheet(null);
+            if ($cell->getSheet() === $this) {
+                $cell->setSheet(null);
             }
         }
 

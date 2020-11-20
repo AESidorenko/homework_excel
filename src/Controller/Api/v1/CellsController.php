@@ -4,6 +4,7 @@ namespace App\Controller\Api\v1;
 
 use App\Entity\Cell;
 use App\Entity\Sheet;
+use App\Helper\MissingArrayFieldsValidator;
 use App\Repository\CellRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\Annotations as Rest;
@@ -13,6 +14,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
@@ -21,6 +23,8 @@ use Symfony\Component\Routing\Annotation\Route;
  */
 class CellsController extends AbstractController
 {
+    use MissingArrayFieldsValidator;
+
     /**
      * @Route("/", methods={"GET"})
      * @Rest\QueryParam(name="left", requirements="\d+", allowBlank=false)
@@ -32,10 +36,8 @@ class CellsController extends AbstractController
      * @param CellRepository $cellRepository
      * @return JsonResponse
      */
-    public function range(Sheet $sheet, ParamFetcher $fetcher, CellRepository $cellRepository): Response
+    public function range(Sheet $sheet, ParamFetcher $fetcher, CellRepository $cellRepository): JsonResponse
     {
-        // todo: params validation, access rights, error handling
-
         $left   = $fetcher->get('left', true);
         $top    = $fetcher->get('top', true);
         $right  = $fetcher->get('right', true);
@@ -53,7 +55,7 @@ class CellsController extends AbstractController
             ];
         }
 
-        return new Response(json_encode(['cells' => $data]), Response::HTTP_OK);
+        return new JsonResponse(['cells' => $data]);
     }
 
     /**
@@ -69,71 +71,55 @@ class CellsController extends AbstractController
      */
     public function update(Sheet $sheet, ParamFetcher $fetcher, EntityManagerInterface $entityManager, Request $request, CellRepository $cellRepository): Response
     {
-        // todo: json validation, access rights, error handling
-
-        $jsonData = json_decode($request->getContent());
-
         $row = $fetcher->get('row', true);
         $col = $fetcher->get('col', true);
+
+        $jsonData = json_decode($request->getContent(), true);
+        $this->AssertSchema($jsonData, ['value']);
 
         /** @var Cell[] $cells */
         $cell = $cellRepository->findOneBySheetAndCoordinates($sheet, $row, $col);
         if ($cell === null) {
             $cell = new Cell();
             $cell
+                ->setSheet($sheet)
                 ->setRow($row)
                 ->setCol($col)
-                ->setValue($jsonData->value);
+                ->setValue($jsonData['value']);
 
             $entityManager->persist($cell);
         } else {
-            $cell->setValue($jsonData->value);
+            $cell->setValue($jsonData['value']);
         }
 
-        try {
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: handle error
-            return new Response(null, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->flush();
 
         return new Response('', Response::HTTP_NO_CONTENT);
     }
 
     /**
-     * @Route("/{row<\d+>}/{col<\d+>}", methods={"DELETE"})
+     * @Route("/", methods={"DELETE"})
+     * @Rest\QueryParam(name="row", requirements="\d+", nullable=false)
+     * @Rest\QueryParam(name="col", requirements="\d+", nullable=false)
      * @param Sheet                  $sheet
-     * @param int                    $row
-     * @param int                    $col
      * @param ParamFetcher           $fetcher
      * @param CellRepository         $cellRepository
      * @param EntityManagerInterface $entityManager
      * @return JsonResponse
      */
-    public function delete(Sheet $sheet, int $row, int $col, ParamFetcher $fetcher, CellRepository $cellRepository, EntityManagerInterface $entityManager): Response
+    public function delete(Sheet $sheet, ParamFetcher $fetcher, CellRepository $cellRepository, EntityManagerInterface $entityManager): Response
     {
-        // todo: params validation, access rights, error handling
-
         $row = $fetcher->get('row', true);
         $col = $fetcher->get('col', true);
 
         $cell = $cellRepository->findOneBySheetAndCoordinates($sheet, $row, $col);
         if ($cell === null) {
-            // todo: handle errors
-            return new Response('', Response::HTTP_NOT_FOUND);
+            throw new NotFoundHttpException('Cell not found');
         }
 
-        try {
-            $entityManager->remove($sheet);
-            $entityManager->flush();
-        } catch (\Exception $exception) {
-            // todo: handle error
-            return new Response(null, Response::HTTP_BAD_REQUEST);
-        }
+        $entityManager->remove($cell);
+        $entityManager->flush();
 
-        return new Response(json_encode([
-            'status'  => 'OK',
-            'message' => 'Cell data deleted',
-        ]), Response::HTTP_OK);
+        return new Response(null, Response::HTTP_NO_CONTENT);
     }
 }
