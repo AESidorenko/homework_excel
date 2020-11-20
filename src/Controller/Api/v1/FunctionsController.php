@@ -10,6 +10,7 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
@@ -27,15 +28,17 @@ class FunctionsController extends AbstractController
      * @param ParamFetcher   $fetcher
      * @return JsonResponse
      */
-    public function sum(Sheet $sheet, CellRepository $cellRepository, ParamFetcher $fetcher): Response
+    public function sum(Sheet $sheet, CellRepository $cellRepository, ParamFetcher $fetcher): JsonResponse
     {
-        // todo: params validation, access rights, error handling
         $row = $fetcher->get('row', false);
         $col = $fetcher->get('col', false);
 
-        if (($row === null && $col === null) || ($row !== null && $col !== null)) {
-            // todo: handle error
-            return new Response('Dimension is not single', Response::HTTP_BAD_REQUEST);
+        if ($row === null && $col === null) {
+            throw new BadRequestHttpException('No dimension presented');
+        }
+
+        if ($row !== null && $col !== null) {
+            throw new BadRequestHttpException('Dimension is not single');
         }
 
         $rangeKind  = $row === null ? 'col' : 'row';
@@ -43,7 +46,7 @@ class FunctionsController extends AbstractController
 
         $result = $cellRepository->calculateSumBySheetAnd1dRange($sheet, $rangeKind, $rangeIndex);
 
-        return new Response(json_encode(['result' => $result]), Response::HTTP_OK, ['Content-type' => 'application/json']);
+        return new JsonResponse(['result' => $result]);
     }
 
     /**
@@ -57,13 +60,15 @@ class FunctionsController extends AbstractController
      */
     public function average(Sheet $sheet, CellRepository $cellRepository, ParamFetcher $fetcher): Response
     {
-        // todo: params validation, access rights, error handling
         $row = $fetcher->get('row', false);
         $col = $fetcher->get('col', false);
 
-        if (($row === null && $col === null) || ($row !== null && $col !== null)) {
-            // todo: handle error
-            return new Response(null, Response::HTTP_BAD_REQUEST);
+        if ($row === null && $col === null) {
+            throw new BadRequestHttpException('No dimension presented');
+        }
+
+        if ($row !== null && $col !== null) {
+            throw new BadRequestHttpException('Dimension is not single');
         }
 
         $rangeKind  = $row === null ? 'col' : 'row';
@@ -71,7 +76,7 @@ class FunctionsController extends AbstractController
 
         $result = $cellRepository->calculateAverageBySheetAnd1dRange($sheet, $rangeKind, $rangeIndex);
 
-        return new Response(json_encode(['result' => $result]), Response::HTTP_OK, ['Content-type' => 'application/json']);
+        return new JsonResponse(['result' => $result]);
     }
 
     /**
@@ -86,14 +91,16 @@ class FunctionsController extends AbstractController
      */
     public function percentile(Sheet $sheet, CellRepository $cellRepository, ParamFetcher $fetcher): Response
     {
-        // todo: params validation, access rights, error handling
         $row       = $fetcher->get('row', true);
         $col       = $fetcher->get('col', true);
         $parameter = (float)$fetcher->get('parameter', true);
 
-        if (($row === null && $col === null) || ($row !== null && $col !== null)) {
-            // todo: handle error
-            return new Response(null, Response::HTTP_BAD_REQUEST);
+        if ($row === null && $col === null) {
+            throw new BadRequestHttpException('No dimension presented');
+        }
+
+        if ($row !== null && $col !== null) {
+            throw new BadRequestHttpException('Dimension is not single');
         }
 
         $rangeKind  = $row === null ? 'col' : 'row';
@@ -101,6 +108,6 @@ class FunctionsController extends AbstractController
 
         $result = $cellRepository->calculatePercentileBySheetAnd1dRangeAndParameter($sheet, $rangeKind, $rangeIndex, $parameter);
 
-        return new Response(json_encode(['result' => $result]), Response::HTTP_OK, ['Content-type' => 'application/json']);
+        return new JsonResponse(['result' => $result]);
     }
 }

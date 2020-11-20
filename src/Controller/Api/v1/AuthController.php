@@ -2,57 +2,52 @@
 
 namespace App\Controller\Api\v1;
 
+use App\Helper\MissingArrayFieldsValidator;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 
 class AuthController extends AbstractController
 {
+    use MissingArrayFieldsValidator;
+
     /**
-     * @Route("/login", name="app_login")
+     * @Route("/login", name="app_login", condition="request.headers.get('Content-Type') === 'application/json'")
      * @param Request                      $request
      * @param UserRepository               $userRepository
      * @param UserPasswordEncoderInterface $passwordEncoder
      * @param EntityManagerInterface       $entityManager
-     * @return Response
+     * @return JsonResponse
      */
     public function login(
         Request $request,
         UserRepository $userRepository,
         UserPasswordEncoderInterface $passwordEncoder,
         EntityManagerInterface $entityManager
-    ): Response
+    ): JsonResponse
     {
         $jsonData = json_decode($request->getContent(), true);
-        if ($jsonData === null) {
-            return new Response(json_encode([]), Response::HTTP_BAD_REQUEST);  // todo: handle error
-        }
-
-        if (!array_key_exists('username', $jsonData) || !array_key_exists('password', $jsonData)) {
-            return new Response(json_encode([]), Response::HTTP_BAD_REQUEST);  // todo: handle error
-        }
+        $this->AssertSchema($jsonData, ['username', 'password']);
 
         $user = $userRepository->findOneByUsername($jsonData['username']);
         if ($user === null) {
-            return new Response(json_encode([]), Response::HTTP_NOT_FOUND);  // todo: handle error
+            throw new NotFoundHttpException('User not found');
         }
 
         if (!$passwordEncoder->isPasswordValid($user, $jsonData['password'])) {
-            return new Response(json_encode([]), Response::HTTP_UNAUTHORIZED);  // todo: handle error
+            throw new UnauthorizedHttpException('Basic realm="Access to the staging API"', 'Invalid credentials');
         }
 
         $user->SetApiToken(bin2hex(openssl_random_pseudo_bytes(16)));
 
         $entityManager->flush();
 
-        $responseData = [
-            'token' => $user->getApiToken()
-        ];
-
-        return new Response(json_encode($responseData));
+        return new JsonResponse(['token' => $user->getApiToken()]);
     }
 }
