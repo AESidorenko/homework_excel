@@ -5,7 +5,6 @@ namespace App\Controller\Api\v1;
 use App\Entity\Cell;
 use App\Entity\Sheet;
 use App\Exception\JsonObjectValidationException;
-use App\Helper\MissingArrayFieldsValidator;
 use App\Repository\CellRepository;
 use App\Repository\SheetRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,8 +24,6 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  */
 class CellsController extends AbstractController
 {
-    use MissingArrayFieldsValidator;
-
     /**
      * @Route("/", methods={"GET"})
      * @Rest\QueryParam(name="left", requirements="\d+", nullable=false, strict=true)

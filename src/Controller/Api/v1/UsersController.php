@@ -4,7 +4,6 @@ namespace App\Controller\Api\v1;
 
 use App\Entity\User;
 use App\Exception\JsonObjectValidationException;
-use App\Helper\MissingArrayFieldsValidator;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\Annotations as Rest;
@@ -25,8 +24,6 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  */
 class UsersController extends AbstractController
 {
-    use MissingArrayFieldsValidator;
-
     /**
      * @Route("/", methods={"POST"}, condition="request.headers.get('Content-Type') === 'application/json'")
      * @ParamConverter("requestUser", converter="fos_rest.request_body")

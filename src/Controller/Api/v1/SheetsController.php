@@ -4,7 +4,6 @@ namespace App\Controller\Api\v1;
 
 use App\Entity\Sheet;
 use App\Exception\JsonObjectValidationException;
-use App\Helper\MissingArrayFieldsValidator;
 use App\Repository\CellRepository;
 use App\Repository\SheetRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,8 +22,6 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  */
 class SheetsController extends AbstractController
 {
-    use MissingArrayFieldsValidator;
-
     /**
      * @Route("/", methods={"POST"}, condition="request.headers.get('Content-Type') === 'application/json'")
      * @ParamConverter("requestSheet", converter="fos_rest.request_body")

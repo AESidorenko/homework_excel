@@ -4,7 +4,6 @@ namespace App\Controller\Api\v1;
 
 use App\Entity\User;
 use App\Exception\JsonObjectValidationException;
-use App\Helper\MissingArrayFieldsValidator;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
@@ -18,8 +17,6 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 class AuthController extends AbstractController
 {
-    use MissingArrayFieldsValidator;
-
     /**
      * @Route("/login", name="app_login", condition="request.headers.get('Content-Type') === 'application/json'")
      * @ParamConverter("requestUser", converter="fos_rest.request_body")
