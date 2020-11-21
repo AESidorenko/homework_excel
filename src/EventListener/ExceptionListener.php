@@ -59,6 +59,7 @@ class ExceptionListener
 
                     break;
                 }
+                // leave this space blank
             case $exception instanceof HttpExceptionInterface:
                 $response->setData([
                         'title'  => 'Error',
