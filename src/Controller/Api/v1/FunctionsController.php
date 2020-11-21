@@ -38,13 +38,14 @@ class FunctionsController extends AbstractController
         }
 
         if ($row !== null && $col !== null) {
-            throw new BadRequestHttpException('Dimension is not single');
+            throw new BadRequestHttpException('Single dimension required');
         }
 
         $rangeKind  = $row === null ? 'col' : 'row';
         $rangeIndex = (int)($rangeKind === 'col' ? $col : $row);
 
-        $result = $cellRepository->calculateSumBySheetAnd1dRange($sheet, $rangeKind, $rangeIndex);
+        $user   = $this->getUser();
+        $result = $cellRepository->calculateSumByUserAndSheetAnd1dRange($user, $sheet, $rangeKind, $rangeIndex);
 
         return new JsonResponse(['result' => $result]);
     }
@@ -74,7 +75,8 @@ class FunctionsController extends AbstractController
         $rangeKind  = $row === null ? 'col' : 'row';
         $rangeIndex = (int)($rangeKind === 'col' ? $col : $row);
 
-        $result = $cellRepository->calculateAverageBySheetAnd1dRange($sheet, $rangeKind, $rangeIndex);
+        $user   = $this->getUser();
+        $result = $cellRepository->calculateAverageByUserAndSheetAnd1dRange($user, $sheet, $rangeKind, $rangeIndex);
 
         return new JsonResponse(['result' => $result]);
     }
@@ -106,7 +108,7 @@ class FunctionsController extends AbstractController
         $rangeKind  = $row === null ? 'col' : 'row';
         $rangeIndex = (int)($rangeKind === 'col' ? $col : $row);
 
-        $result = $cellRepository->calculatePercentileBySheetAnd1dRangeAndParameter($sheet, $rangeKind, $rangeIndex, $parameter);
+        $result = $cellRepository->calculatePercentileByUserAndSheetAnd1dRangeAndParameter($user, $sheet, $rangeKind, $rangeIndex, $parameter);
 
         return new JsonResponse(['result' => $result]);
     }

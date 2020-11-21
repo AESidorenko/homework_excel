@@ -2,11 +2,12 @@
 
 namespace App\EventListener;
 
-use FOS\RestBundle\Exception\InvalidParameterException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\Serializer\Exception\NotNormalizableValueException;
 
 class ExceptionListener
 {
@@ -23,32 +24,40 @@ class ExceptionListener
             ]
         );
 
-        if ($exception instanceof InvalidParameterException) {
-            $response->setData([
-                'title'          => 'Invalid request parameter',
-                'invalid-params' => [
-                    'name'   => $exception->getParameter()->getName(),
-                    'reason' => 'parameter missed or has invalid format'
-                ]
-            ]);
-        } elseif ($exception instanceof HttpExceptionInterface) {
-            $response->setStatusCode($exception->getStatusCode());
-            $response->headers->add($exception->getHeaders());
-            $exceptionMessageData = json_decode($exception->getMessage(), true);
-            if ($exceptionMessageData === null) {
+        switch (true) {
+            case $exception instanceof \App\Exception\JsonObjectValidationException:
+                $response->setData([
+                    'title'          => $exception->getMessage(),
+                    'invalid-params' => array_map(function ($error) {
+                        return [
+                            'name'   => $error->getPropertyPath(),
+                            'reason' => $error->getMessage()
+                        ];
+                    }, iterator_to_array($exception->getValidationErrors()))
+                ]);
+
+                break;
+
+            case $exception instanceof BadRequestHttpException:
+                if ($exception->getPrevious() instanceof NotNormalizableValueException) {
+                    $response->setData([
+                        'title'  => "Invalid JSON parameter",
+                        'detail' => "Failed to deserialize one of the JSON parameters correctly"
+                    ]);
+
+                    break;
+                }
+            case $exception instanceof HttpExceptionInterface:
                 $response->setData([
                         'title'  => 'Error',
                         'detail' => $exception->getMessage()
                     ]
                 );
-            } else {
-                $response->setData($exceptionMessageData);
-            }
-        } else {
-            $response->setStatusCode(Response::HTTP_INTERNAL_SERVER_ERROR);
-            $response->setContent(json_encode([
-                'title' => 'Internal server error',
-            ]));
+
+                break;
+            default:
+                $response->setStatusCode(Response::HTTP_INTERNAL_SERVER_ERROR);
+                $response->setContent(json_encode(['title' => 'Internal server error', 'reason' => $exception->getMessage()]));
         }
 
         $event->setResponse($response);

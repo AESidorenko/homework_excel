@@ -12,6 +12,11 @@ class CellsControllerTest extends WebTestCase
     {
         $client = static::createClient();
         $client->followRedirects(true);
+
+        $client->setServerParameters([
+            'X-AUTH-TOKEN' => 'test_token'
+        ]);
+
         $client->xmlHttpRequest(
             'GET',
             '/api/v1/sheets/1/cells/',
@@ -43,6 +48,11 @@ class CellsControllerTest extends WebTestCase
     {
         $client = static::createClient();
         $client->followRedirects(true);
+
+        $client->setServerParameters([
+            'X-AUTH-TOKEN' => 'test_token'
+        ]);
+
         $client->xmlHttpRequest(
             'PUT',
             '/api/v1/sheets/1/cells/?row=10&col=20',
@@ -51,6 +61,11 @@ class CellsControllerTest extends WebTestCase
             [],
             json_encode(['value' => 30])
         );
+
+        $client->setServerParameters([
+            'Content-type' => 'application/json',
+            'X-AUTH-TOKEN' => 'test_token'
+        ]);
 
         $this->assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());
     }
@@ -66,6 +81,10 @@ class CellsControllerTest extends WebTestCase
             'DELETE',
             '/api/v1/sheets/1/cells/?row=4&col=5'
         );
+
+        $client->setServerParameters([
+            'X-AUTH-TOKEN' => 'test_token'
+        ]);
 
         $this->assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());
     }

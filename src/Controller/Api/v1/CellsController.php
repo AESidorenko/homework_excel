@@ -4,18 +4,20 @@ namespace App\Controller\Api\v1;
 
 use App\Entity\Cell;
 use App\Entity\Sheet;
+use App\Exception\JsonObjectValidationException;
 use App\Helper\MissingArrayFieldsValidator;
 use App\Repository\CellRepository;
+use App\Repository\SheetRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\Annotations as Rest;
 use FOS\RestBundle\Request\ParamFetcher;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 /**
  * @Route("/sheets/{sheetId}/cells")
@@ -27,24 +29,27 @@ class CellsController extends AbstractController
 
     /**
      * @Route("/", methods={"GET"})
-     * @Rest\QueryParam(name="left", requirements="\d+", allowBlank=false)
-     * @Rest\QueryParam(name="top", requirements="\d+", allowBlank=false)
-     * @Rest\QueryParam(name="right", requirements="\d+", allowBlank=false)
-     * @Rest\QueryParam(name="bottom", requirements="\d+", allowBlank=false)
-     * @param Sheet          $sheet
-     * @param ParamFetcher   $fetcher
-     * @param CellRepository $cellRepository
+     * @Rest\QueryParam(name="left", requirements="\d+", nullable=false, strict=true)
+     * @Rest\QueryParam(name="top", requirements="\d+", nullable=false, strict=true)
+     * @Rest\QueryParam(name="right", requirements="\d+", nullable=false, strict=true)
+     * @Rest\QueryParam(name="bottom", requirements="\d+", nullable=false, strict=true)
+     * @param Sheet           $sheet
+     * @param ParamFetcher    $fetcher
+     * @param CellRepository  $cellRepository
+     * @param SheetRepository $sheetRepository
      * @return JsonResponse
      */
-    public function range(Sheet $sheet, ParamFetcher $fetcher, CellRepository $cellRepository): JsonResponse
+    public function range(Sheet $sheet, ParamFetcher $fetcher, CellRepository $cellRepository, SheetRepository $sheetRepository): JsonResponse
     {
-        $left   = $fetcher->get('left', true);
-        $top    = $fetcher->get('top', true);
-        $right  = $fetcher->get('right', true);
-        $bottom = $fetcher->get('bottom', true);
+        $left   = $fetcher->get('left');
+        $right  = $fetcher->get('right');
+        $bottom = $fetcher->get('bottom');
+        $top    = $fetcher->get('top');
+
+        $user = $this->getUser();
 
         /** @var Cell[] $cells */
-        $cells = $cellRepository->findAllBySheetAndRange($sheet, $left, $top, $right, $bottom);
+        $cells = $cellRepository->findAllByUserAndSheetAndRange($user, $sheet, $left, $top, $right, $bottom);
 
         $data = [];
         foreach ($cells as $cell) {
@@ -59,39 +64,37 @@ class CellsController extends AbstractController
     }
 
     /**
-     * @Route("/", methods={"PUT"})
-     * @Rest\QueryParam(name="row", requirements="\d+", allowBlank=false)
-     * @Rest\QueryParam(name="col", requirements="\d+", allowBlank=false)
-     * @param Sheet                  $sheet
-     * @param ParamFetcher           $fetcher
-     * @param EntityManagerInterface $entityManager
-     * @param Request                $request
-     * @param CellRepository         $cellRepository
+     * @Route("/", methods={"PUT"}, condition="request.headers.get('Content-Type') === 'application/json'")
+     * @Rest\QueryParam(name="row", requirements="\d+", nullable=false, strict=true)
+     * @Rest\QueryParam(name="col", requirements="\d+", nullable=false, strict=true)
+     * @ParamConverter("requestCell", converter="fos_rest.request_body")
+     * @param Sheet                            $sheet
+     * @param Cell                             $requestCell
+     * @param ConstraintViolationListInterface $validationErrors
+     * @param ParamFetcher                     $fetcher
+     * @param EntityManagerInterface           $entityManager
+     * @param CellRepository                   $cellRepository
      * @return JsonResponse
      */
-    public function update(Sheet $sheet, ParamFetcher $fetcher, EntityManagerInterface $entityManager, Request $request, CellRepository $cellRepository): Response
+    public function update(Sheet $sheet, Cell $requestCell, ConstraintViolationListInterface $validationErrors, ParamFetcher $fetcher, EntityManagerInterface $entityManager, CellRepository $cellRepository): Response
     {
-        $row = $fetcher->get('row', true);
-        $col = $fetcher->get('col', true);
+        $row = $fetcher->get('row');
+        $col = $fetcher->get('col');
 
-        $jsonData = json_decode($request->getContent(), true);
-        $this->AssertSchema($jsonData, ['value']);
-
-        /** @var Cell[] $cells */
-        $cell = $cellRepository->findOneBySheetAndCoordinates($sheet, $row, $col);
-        if ($cell === null) {
-            $cell = new Cell();
-            $cell
-                ->setSheet($sheet)
-                ->setRow($row)
-                ->setCol($col)
-                ->setValue($jsonData['value']);
-
-            $entityManager->persist($cell);
-        } else {
-            $cell->setValue($jsonData['value']);
+        if ($validationErrors->count() > 0) {
+            throw new JsonObjectValidationException($validationErrors);
         }
 
+        $user = $this->getUser();
+        $cell = $cellRepository->findOneByUserAndSheetAndCoordinates($user, $sheet, $row, $col) ?? new Cell();
+
+        $cell
+            ->setSheet($sheet)
+            ->setRow($row)
+            ->setCol($col)
+            ->setValue($requestCell->getValue());
+
+        $entityManager->persist($cell);
         $entityManager->flush();
 
         return new Response('', Response::HTTP_NO_CONTENT);
@@ -112,7 +115,8 @@ class CellsController extends AbstractController
         $row = $fetcher->get('row', true);
         $col = $fetcher->get('col', true);
 
-        $cell = $cellRepository->findOneBySheetAndCoordinates($sheet, $row, $col);
+        $user = $this->getUser();
+        $cell = $cellRepository->findOneByUserAndSheetAndCoordinates($user, $sheet, $row, $col);
         if ($cell === null) {
             throw new NotFoundHttpException('Cell not found');
         }
