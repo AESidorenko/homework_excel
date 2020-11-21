@@ -2,6 +2,8 @@
 
 namespace App\EventListener;
 
+use App\Exception\JsonObjectValidationException;
+use FOS\RestBundle\Exception\InvalidParameterException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -25,7 +27,7 @@ class ExceptionListener
         );
 
         switch (true) {
-            case $exception instanceof \App\Exception\JsonObjectValidationException:
+            case $exception instanceof JsonObjectValidationException:
                 $response->setData([
                     'title'          => $exception->getMessage(),
                     'invalid-params' => array_map(function ($error) {
@@ -37,7 +39,17 @@ class ExceptionListener
                 ]);
 
                 break;
+            case $exception instanceof InvalidParameterException:
+                $response->setData([
+                        'title'          => 'Invalid parameter',
+                        'invalid-params' => [
+                            'name'   => $exception->getParameter()->name,
+                            'reason' => "Parameter missed or doesn't match requirements"
+                        ]
+                    ]
+                );
 
+                break;
             case $exception instanceof BadRequestHttpException:
                 if ($exception->getPrevious() instanceof NotNormalizableValueException) {
                     $response->setData([
