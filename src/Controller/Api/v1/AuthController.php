@@ -39,6 +39,13 @@ class AuthController extends AbstractController
             throw new JsonObjectValidationException($validationErrors);
         }
 
+        /** @var User $currentLoggedUser */
+        $currentLoggedUser = $this->getUser();
+        if ($currentLoggedUser !== null) {
+            $currentLoggedUser->setApiToken(null);
+            $entityManager->flush();
+        }
+
         $user = $userRepository->findOneByUsername($requestUser->getUsername());
         if ($user === null) {
             throw new NotFoundHttpException('User not found');
@@ -53,5 +60,13 @@ class AuthController extends AbstractController
         $entityManager->flush();
 
         return new JsonResponse(['token' => $user->getApiToken()]);
+    }
+
+    /**
+     * @Route("/logout", name="app_logout")
+     */
+    public function logout()
+    {
+        // this action will never be executed
     }
 }

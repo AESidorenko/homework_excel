@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Symfony\Component\Serializer\Exception\NotNormalizableValueException;
 
 class ExceptionListener
@@ -27,6 +28,15 @@ class ExceptionListener
         );
 
         switch (true) {
+            case $exception instanceof UnauthorizedHttpException:
+                $response
+                    ->setData([
+                        'title'  => 'Unauthorized',
+                        'detail' => 'Authorization failure'
+                    ])
+                    ->setStatusCode(Response::HTTP_UNAUTHORIZED);
+
+                break;
             case $exception instanceof JsonObjectValidationException:
                 $response->setData([
                     'title'          => $exception->getMessage(),
@@ -59,7 +69,7 @@ class ExceptionListener
 
                     break;
                 }
-                // leave this space blank
+            // leave this space blank
             case $exception instanceof HttpExceptionInterface:
                 $response->setData([
                         'title'  => 'Error',
