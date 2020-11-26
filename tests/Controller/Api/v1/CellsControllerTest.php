@@ -8,16 +8,26 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CellsControllerTest extends WebTestCase
 {
-    public function testRange()
-    {
-        $client = static::createClient();
-        $client->followRedirects(true);
+    private \Symfony\Bundle\FrameworkBundle\KernelBrowser $client;
 
-        $client->setServerParameters([
-            'X-AUTH-TOKEN' => 'test_token'
+    /**
+     * CellsControllerTest constructor.
+     */
+    public function setUp()
+    {
+        $this->client = static::createClient();
+        $this->client->followRedirects(true);
+        $this->client->setServerParameters([
+            'HTTP_X-AUTH-TOKEN' => 'test_token',
+            'HTTP_Content-Type' => 'application/json'
         ]);
 
-        $client->xmlHttpRequest(
+        self::bootKernel();
+    }
+
+    public function testRange()
+    {
+        $this->client->xmlHttpRequest(
             'GET',
             '/api/v1/sheets/1/cells/',
             [
@@ -31,7 +41,7 @@ class CellsControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
         $this->assertResponseHeaderSame('Content-type', 'application/json');
 
-        $responseJson = $client->getResponse()->getContent();
+        $responseJson = $this->client->getResponse()->getContent();
 
         $expectedJson = ["cells" => []];
         foreach (MockDataHelper::generate2dFilledCellArray(0, 0, 4, 5) as $item) {
@@ -46,14 +56,7 @@ class CellsControllerTest extends WebTestCase
      */
     public function testUpdate()
     {
-        $client = static::createClient();
-        $client->followRedirects(true);
-
-        $client->setServerParameters([
-            'X-AUTH-TOKEN' => 'test_token'
-        ]);
-
-        $client->xmlHttpRequest(
+        $this->client->xmlHttpRequest(
             'PUT',
             '/api/v1/sheets/1/cells/?row=10&col=20',
             [],
@@ -62,12 +65,7 @@ class CellsControllerTest extends WebTestCase
             json_encode(['value' => 30])
         );
 
-        $client->setServerParameters([
-            'Content-type' => 'application/json',
-            'X-AUTH-TOKEN' => 'test_token'
-        ]);
-
-        $this->assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());
+        $this->assertEquals(Response::HTTP_NO_CONTENT, $this->client->getResponse()->getStatusCode());
     }
 
     /**
@@ -75,17 +73,11 @@ class CellsControllerTest extends WebTestCase
      */
     public function testDelete()
     {
-        $client = static::createClient();
-
-        $client->xmlHttpRequest(
+        $this->client->xmlHttpRequest(
             'DELETE',
             '/api/v1/sheets/1/cells/?row=4&col=5'
         );
 
-        $client->setServerParameters([
-            'X-AUTH-TOKEN' => 'test_token'
-        ]);
-
-        $this->assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());
+        $this->assertEquals(Response::HTTP_NO_CONTENT, $this->client->getResponse()->getStatusCode());
     }
 }
