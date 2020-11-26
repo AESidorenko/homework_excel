@@ -4,6 +4,7 @@ security:
             algorithm: auto
 
     enable_authenticator_manager: true
+
     providers:
         db_user_provider:
             entity:
@@ -15,8 +16,8 @@ security:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
         main:
+            stateless: true
             lazy: true
-            provider: db_user_provider
             guard:
                 authenticators:
                     - App\Security\ApiKeyAuthenticator
@@ -25,4 +26,4 @@ security:
 
     access_control:
         - { path: ^/api/v1/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/api/v1/, roles: ROLE_USER }
+        - { path: ^/api/v1/, roles: IS_AUTHENTICATED_FULLY }
