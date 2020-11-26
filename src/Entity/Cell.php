@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\CellRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @ORM\Entity(repositoryClass=CellRepository::class)
@@ -40,7 +41,8 @@ class Cell
     private $col;
 
     /**
-     * @ORM\Column(type="float")
+     * @ORM\Column(type="float", options={"message": "aaaa"})
+     * @Assert\NotNull()
      */
     private $value;
 

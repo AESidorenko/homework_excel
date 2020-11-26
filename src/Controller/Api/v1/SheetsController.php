@@ -3,42 +3,43 @@
 namespace App\Controller\Api\v1;
 
 use App\Entity\Sheet;
-use App\Helper\MissingArrayFieldsValidator;
+use App\Exception\JsonObjectValidationException;
 use App\Repository\CellRepository;
 use App\Repository\SheetRepository;
-use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\Annotations as Rest;
 use FOS\RestBundle\Request\ParamFetcher;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 /**
  * @Route("/sheets")
  */
 class SheetsController extends AbstractController
 {
-    use MissingArrayFieldsValidator;
-
     /**
-     * @Route("/", methods={"POST"})
-     * @param Request                $request
-     * @param UserRepository         $userRepository
-     * @param EntityManagerInterface $entityManager
+     * @Route("/", methods={"POST"}, condition="request.headers.get('Content-Type') === 'application/json'")
+     * @ParamConverter("requestSheet", converter="fos_rest.request_body")
+     * @param Sheet                            $requestSheet
+     * @param ConstraintViolationListInterface $validationErrors
+     * @param EntityManagerInterface           $entityManager
      * @return JsonResponse
      */
-    public function create(Request $request, UserRepository $userRepository, EntityManagerInterface $entityManager): JsonResponse
+    public function create(Sheet $requestSheet, ConstraintViolationListInterface $validationErrors, EntityManagerInterface $entityManager): JsonResponse
     {
-        $jsonData = json_decode($request->getContent(), true);
-        $this->AssertSchema($jsonData, ['name']);
+        if ($validationErrors->count() > 0) {
+            throw new JsonObjectValidationException($validationErrors);
+        }
 
         $user = $this->getUser();
 
         $sheet = (new Sheet())
-            ->setName($jsonData['name'])
+            ->setName($requestSheet->getName())
             ->setOwner($user);
 
         $entityManager->persist($sheet);
@@ -60,7 +61,9 @@ class SheetsController extends AbstractController
         $offset = (int)$fetcher->get('offset', true);
         $limit  = (int)$fetcher->get('limit', true);
 
-        $sheets = $sheetRepository->findAllPaginated($offset, $limit);
+        $user        = $this->getUser();
+        $sheets      = $sheetRepository->findAllPaginatedByUserAndOffsetAndLimit($user, $offset, $limit);
+        $totalSheets = $sheetRepository->countByUser($user);
 
         $list = [];
         foreach ($sheets as $sheet) {
@@ -71,7 +74,7 @@ class SheetsController extends AbstractController
             ];
         }
 
-        return new JsonResponse(['sheets' => $list]);
+        return new JsonResponse(['total_sheets' => $totalSheets, 'sheets' => $list]);
     }
 
     /**
@@ -82,7 +85,6 @@ class SheetsController extends AbstractController
     public function one(Sheet $sheet): JsonResponse
     {
         $data = [
-            'id'       => $sheet->getId(),
             'name'     => $sheet->getName(),
             'owner_id' => $sheet->getOwner()->getUsername()
         ];
@@ -91,18 +93,27 @@ class SheetsController extends AbstractController
     }
 
     /**
-     * @Route("/{id<\d+>}", methods={"PUT"})
-     * @param Sheet                  $sheet
-     * @param Request                $request
-     * @param EntityManagerInterface $entityManager
+     * @Route("/{id<\d+>}", methods={"PUT"}, condition="request.headers.get('Content-Type') === 'application/json'")
+     * @ParamConverter("requestSheet", converter="fos_rest.request_body")
+     * @param Sheet                            $requestSheet
+     * @param ConstraintViolationListInterface $validationErrors
+     * @param SheetRepository                  $sheetRepository
+     * @param EntityManagerInterface           $entityManager
      * @return JsonResponse
      */
-    public function update(Sheet $sheet, Request $request, EntityManagerInterface $entityManager): Response
+    public function update(Sheet $requestSheet, ConstraintViolationListInterface $validationErrors, SheetRepository $sheetRepository, EntityManagerInterface $entityManager): Response
     {
-        $jsonData = json_decode($request->getContent(), true);
-        $this->AssertSchema($jsonData, 'name');
+        if ($validationErrors->count() > 0) {
+            throw new JsonObjectValidationException($validationErrors);
+        }
 
-        $sheet->setName($jsonData['name']);
+        $user  = $this->getUser();
+        $sheet = $sheetRepository->findOneByUserAndName($user, $requestSheet->getName());
+        if ($sheet === null) {
+            throw new NotFoundHttpException("Sheet not found");
+        }
+
+        $sheet->setName($requestSheet->getName());
 
         $entityManager->flush();
 
@@ -131,7 +142,8 @@ class SheetsController extends AbstractController
      */
     public function getDimensions(Sheet $sheet, CellRepository $cellRepository): JsonResponse
     {
-        $dimensions = $cellRepository->getDimensionsBySheet($sheet);
+        $user       = $this->getUser();
+        $dimensions = $cellRepository->getDimensionsByUserAndSheet($user, $sheet);
 
         $result = [
             "rows" => $dimensions['totalRows'],
