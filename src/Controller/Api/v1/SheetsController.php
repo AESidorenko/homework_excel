@@ -13,7 +13,7 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 
@@ -26,21 +26,28 @@ class SheetsController extends AbstractController
      * @Route("/", methods={"POST"}, condition="request.headers.get('Content-Type') === 'application/json'")
      * @ParamConverter("requestSheet", converter="fos_rest.request_body")
      * @param Sheet                            $requestSheet
+     * @param SheetRepository                  $sheetRepository
      * @param ConstraintViolationListInterface $validationErrors
      * @param EntityManagerInterface           $entityManager
      * @return JsonResponse
      */
-    public function create(Sheet $requestSheet, ConstraintViolationListInterface $validationErrors, EntityManagerInterface $entityManager): JsonResponse
+    public function create(Sheet $requestSheet, SheetRepository $sheetRepository, ConstraintViolationListInterface $validationErrors, EntityManagerInterface $entityManager): JsonResponse
     {
         if ($validationErrors->count() > 0) {
             throw new JsonObjectValidationException($validationErrors);
         }
 
         $user = $this->getUser();
+        // todo: figure out why UniqueEntity(owner,name) doesn't work
+        //       followings is a workaround for UniqueEntity constraint
+        $sheet = $sheetRepository->findOneByUserAndName($user, $requestSheet->getName());
+        if ($sheet !== null) {
+            throw new ConflictHttpException("Sheet already exists.");
+        }
 
         $sheet = (new Sheet())
             ->setName($requestSheet->getName())
-            ->setOwner($user);
+            ->setOwner($this->getUser());
 
         $entityManager->persist($sheet);
         $entityManager->flush();
@@ -95,25 +102,28 @@ class SheetsController extends AbstractController
     /**
      * @Route("/{id<\d+>}", methods={"PUT"}, condition="request.headers.get('Content-Type') === 'application/json'")
      * @ParamConverter("requestSheet", converter="fos_rest.request_body")
+     * @param Sheet                            $updatingSheet
      * @param Sheet                            $requestSheet
      * @param ConstraintViolationListInterface $validationErrors
      * @param SheetRepository                  $sheetRepository
      * @param EntityManagerInterface           $entityManager
      * @return JsonResponse
      */
-    public function update(Sheet $requestSheet, ConstraintViolationListInterface $validationErrors, SheetRepository $sheetRepository, EntityManagerInterface $entityManager): Response
+    public function update(Sheet $updatingSheet, Sheet $requestSheet, ConstraintViolationListInterface $validationErrors, SheetRepository $sheetRepository, EntityManagerInterface $entityManager): Response
     {
         if ($validationErrors->count() > 0) {
             throw new JsonObjectValidationException($validationErrors);
         }
 
-        $user  = $this->getUser();
+        $user = $this->getUser();
+        // todo: figure out why UniqueEntity(owner,name) doesn't work
+        //       followings is a workaround for UniqueEntity constraint
         $sheet = $sheetRepository->findOneByUserAndName($user, $requestSheet->getName());
-        if ($sheet === null) {
-            throw new NotFoundHttpException("Sheet not found");
+        if ($sheet !== null) {
+            throw new ConflictHttpException("Sheet already exists.");
         }
 
-        $sheet->setName($requestSheet->getName());
+        $updatingSheet->setName($requestSheet->getName());
 
         $entityManager->flush();
 

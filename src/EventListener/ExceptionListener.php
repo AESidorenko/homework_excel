@@ -28,15 +28,6 @@ class ExceptionListener
         );
 
         switch (true) {
-            case $exception instanceof UnauthorizedHttpException:
-                $response
-                    ->setData([
-                        'title'  => 'Unauthorized',
-                        'detail' => 'Authorization failure'
-                    ])
-                    ->setStatusCode(Response::HTTP_UNAUTHORIZED);
-
-                break;
             case $exception instanceof JsonObjectValidationException:
                 $response->setData([
                     'title'          => $exception->getMessage(),
@@ -71,11 +62,16 @@ class ExceptionListener
                 }
             // leave this space blank
             case $exception instanceof HttpExceptionInterface:
-                $response->setData([
-                        'title'  => 'Error',
-                        'detail' => $exception->getMessage()
-                    ]
-                );
+                $response
+                    ->setData([
+                            'title'  => 'Error',
+                            'detail' => $exception->getMessage()
+                        ]
+                    )
+                    ->setStatusCode($exception->getStatusCode());
+
+                /** @var UnauthorizedHttpException $exception */
+                $response->headers->add($exception->getHeaders());
 
                 break;
             default:

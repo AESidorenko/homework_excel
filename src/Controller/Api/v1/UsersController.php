@@ -5,15 +5,19 @@ namespace App\Controller\Api\v1;
 use App\Entity\User;
 use App\Exception\JsonObjectValidationException;
 use App\Repository\UserRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\Annotations as Rest;
 use FOS\RestBundle\Request\ParamFetcher;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
@@ -27,6 +31,7 @@ class UsersController extends AbstractController
     /**
      * @Route("/", methods={"POST"}, condition="request.headers.get('Content-Type') === 'application/json'")
      * @ParamConverter("requestUser", converter="fos_rest.request_body")
+     * @IsGranted("ROLE_ADMIN")
      * @param User                             $requestUser
      * @param ConstraintViolationListInterface $validationErrors
      * @param Request                          $request
@@ -45,7 +50,12 @@ class UsersController extends AbstractController
              ->setPassword($encoder->encodePassword($user, $requestUser->getPassword()));
 
         $entityManager->persist($user);
-        $entityManager->flush();
+
+        try {
+            $entityManager->flush();
+        } catch (UniqueConstraintViolationException $e) {
+            throw new ConflictHttpException("User with the same username already exists");
+        }
 
         return new JsonResponse(['id' => $user->getId()], Response::HTTP_CREATED);
     }
@@ -55,6 +65,7 @@ class UsersController extends AbstractController
      * @Rest\QueryParam(name="order", requirements="(id|username)", allowBlank=false, default="id")
      * @Rest\QueryParam(name="offset", requirements="\d+", allowBlank=false, default="0")
      * @Rest\QueryParam(name="limit", requirements="\d+", allowBlank=false, default="25")
+     * @IsGranted("ROLE_ADMIN")
      * @param UserRepository $userRepository
      * @param ParamFetcher   $fetcher
      * @return JsonResponse
@@ -85,6 +96,10 @@ class UsersController extends AbstractController
      */
     public function one(User $user): JsonResponse
     {
+        if ($user->getId() !== $this->getUser()->getId()) {
+            throw new AccessDeniedHttpException('Access denied');
+        }
+
         $userData = [
             'username'     => $user->getUsername(),
             'sheets-count' => $user->getSheets()->count()
@@ -112,19 +127,28 @@ class UsersController extends AbstractController
         $user = $userRepository->findOneByUsername($requestUser->getUsername());
         $user->setPassword($encoder->encodePassword($user, $requestUser->getPassword()));
 
-        $entityManager->flush();
+        try {
+            $entityManager->flush();
+        } catch (UniqueConstraintViolationException $exception) {
+            throw new ConflictHttpException('User already exists');
+        }
 
         return new Response(null, Response::HTTP_NO_CONTENT);
     }
 
     /**
      * @Route("/{id<\d+>}", methods={"DELETE"})
+     * @IsGranted("ROLE_ADMIN")
      * @param User                   $user
      * @param EntityManagerInterface $entityManager
      * @return Response
      */
     public function delete(User $user, EntityManagerInterface $entityManager): Response
     {
+        if ($user->getId() === $this->getUser()->getId()) {
+            throw new ConflictHttpException('Can\'t delete user himself');
+        }
+
         $entityManager->remove($user);
         $entityManager->flush();
 
