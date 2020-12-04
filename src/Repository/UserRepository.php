@@ -67,4 +67,12 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
                     ->getQuery()
                     ->getResult();
     }
+
+    public function getCount(): int
+    {
+        return $this->createQueryBuilder('u')
+                    ->select('count(u.id)')
+                    ->getQuery()
+                    ->getSingleScalarResult();
+    }
 }

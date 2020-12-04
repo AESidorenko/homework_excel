@@ -40,7 +40,7 @@ class ApiKeyAuthenticator extends AbstractGuardAuthenticator
             throw new CustomUserMessageAuthenticationException('No API token provided');
         }
 
-        $user = $userRepository->findOneBy(['apiToken' => $apiToken]); // todo: make unified method findOneByApiToken
+        $user = $userRepository->findOneBy(['apiToken' => $apiToken]);
         if (null === $user) {
             throw new UsernameNotFoundException();
         }

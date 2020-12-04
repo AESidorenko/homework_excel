@@ -76,7 +76,8 @@ class UsersController extends AbstractController
         $offset = (int)$fetcher->get('offset', true);
         $limit  = (int)$fetcher->get('limit', true);
 
-        $users = $userRepository->findAllOrderedPaginated($order, $offset, $limit);
+        $usersCount = $userRepository->getCount();
+        $users      = $userRepository->findAllOrderedPaginated($order, $offset, $limit);
 
         $list = [];
         foreach ($users as $user) {
@@ -86,7 +87,7 @@ class UsersController extends AbstractController
             ];
         }
 
-        return new JsonResponse(['users' => $list]);
+        return new JsonResponse(['total' => $usersCount, 'users' => $list]);
     }
 
     /**
