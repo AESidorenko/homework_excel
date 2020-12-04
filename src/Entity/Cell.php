@@ -41,7 +41,7 @@ class Cell
     private $col;
 
     /**
-     * @ORM\Column(type="float", options={"message": "aaaa"})
+     * @ORM\Column(type="float")
      * @Assert\NotNull()
      */
     private $value;
